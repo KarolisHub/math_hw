@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:math_hw/components/login_button.dart';
+import 'package:math_hw/components/login_text_field.dart';
 
 class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
+  LoginScreen({super.key});
+
+  final usernameController = TextEditingController();
+  final passwordController = TextEditingController();
+
 
   @override
   Widget build(BuildContext context) {
@@ -35,27 +41,40 @@ class LoginScreen extends StatelessWidget {
                   children: [
                     const SizedBox(height: 50),
                     //el. paštas
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40.0),
-                      child: TextField(
-                        decoration: InputDecoration(
-                          enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.white)
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey)
-                          ),
-                          fillColor: Color(0xFFFFA500),
-                          filled: true
-                        ),
-                      ),
-                    )
+                    LoginTextField(
+                      controller: usernameController,
+                      hintText: 'El. paštas',
+                      obscureText: false,
+                    ),
+
+                    const SizedBox(height: 20),
 
                     //slaptažodis
+                    LoginTextField(
+                      controller: passwordController,
+                      hintText: 'Slaptažodis',
+                      obscureText: true,
+                    ),
 
                     //pamiršau slaptažodį
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Pamiršai slaptažodį?',
+                            style: TextStyle(color: Color(0xB3292D32)),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
 
                     //prisijungti mygtukas
+
+                    LoginButton(),
 
                     //arba
 
