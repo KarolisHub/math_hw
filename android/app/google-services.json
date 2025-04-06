@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "718178402915",
+    "project_id": "math-hw-auth",
+    "storage_bucket": "math-hw-auth.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:718178402915:android:b86b9e7e3c5fa1b3466e56",
+        "android_client_info": {
+          "package_name": "com.example.math_hw"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXMUBVypyyyfu2BYPIKjv7kVXHJNSFrOE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

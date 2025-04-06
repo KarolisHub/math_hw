@@ -6,22 +6,22 @@ import 'package:math_hw/components/login_text_field.dart';
 
 import '../services/auth_services.dart';
 
-class LoginScreen extends StatefulWidget {
+class RegisterPage extends StatefulWidget {
   final Function()? onTap;
-  const LoginScreen({super.key, required this.onTap});
+  const RegisterPage({super.key, required this.onTap});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterPageState extends State<RegisterPage> {
   //text editing controller
   final emailController = TextEditingController();
-
   final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
 
   //sign user in method
-  void signUserIn()async{
+  void signUserUp()async{
 
     //show loading circle
     showDialog(
@@ -33,13 +33,20 @@ class _LoginScreenState extends State<LoginScreen> {
         }
     );
 
-    //try sign in
+    //try sign user up
 
     try{
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text,
-        password: passwordController.text,
-      );
+      //patikrinti ar slaptažodis yra patvirtintas
+      if(passwordController.text == confirmPasswordController.text){
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: emailController.text,
+          password: passwordController.text,
+        );
+      }else{
+        //blogai pakartotas slaptažodis
+        wrongPasswordMessage();
+        showErrorMessage("Slaptažodis nesutampa");
+      }
 
 
       Navigator.pop(context);
@@ -58,8 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
         builder: (context){
           return AlertDialog(
             title: Text(
-                message,
-              style: TextStyle(color: Color(0xFFFFA500)),
+              message,
 
             ),
           );
@@ -67,6 +73,17 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  //wrong password message popup
+  void wrongPasswordMessage(){
+    showDialog(
+        context: context,
+        builder: (context){
+          return const AlertDialog(
+            title: Text('Blogas slpatažodis'),
+          );
+        }
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,18 +99,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 Center(
                   child: const Icon(
                     Icons.lock,
-                    size: 150,
+                    size: 120,
                   ),
                 ),
               )
           ),
           Expanded(
-            flex: 2,
+              flex: 3,
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(40),
-                    topRight: Radius.circular(40)
+                      topLeft: Radius.circular(40),
+                      topRight: Radius.circular(40)
                   ),
                   color: Color(0xFFADD8E6),
                 ),
@@ -108,43 +125,37 @@ class _LoginScreenState extends State<LoginScreen> {
                         hintText: 'El. paštas',
                         obscureText: false,
                       ),
-                  
+
                       const SizedBox(height: 20),
-                  
+
                       //slaptažodis
                       LoginTextField(
                         controller: passwordController,
                         hintText: 'Slaptažodis',
                         obscureText: true,
                       ),
-                  
-                      //pamiršau slaptažodį
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 40.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Text(
-                              'Pamiršai slaptažodį?',
-                              style: TextStyle(color: Color(0xB3292D32)),
-                            ),
-                          ],
-                        ),
-                      ),
-                  
+
                       const SizedBox(height: 20),
-                  
-                      //prisijungti mygtukas
-                  
-                      LoginButton(
-                        onTap: signUserIn,
-                        text: 'Prisijungti',
+
+                      //pakartoti slaptažodį
+                      LoginTextField(
+                        controller: confirmPasswordController,
+                        hintText: 'Pakartoti slaptažodį',
+                        obscureText: true,
                       ),
-                  
+
+                      const SizedBox(height: 20),
+
+                      //prisijungti mygtukas
+                      LoginButton(
+                        onTap: signUserUp,
+                        text: 'Registruotis',
+                      ),
+
                       const SizedBox(height: 50),
-                  
+
                       //arba
-                  
+
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 25.0),
                         child: Row(
@@ -155,15 +166,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                 color: Color(0xFFFFA500),
                               ),
                             ),
-                  
+
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 25.0),
                               child: Text(
-                                  "arba",
+                                "arba",
                                 style: TextStyle(color: Color(0xB3292D32)),
                               ),
                             ),
-                  
+
                             Expanded(
                               child: Divider(
                                 thickness: 1.2,
@@ -174,55 +185,55 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 50),
-                  
+
                       //google ir apple prisijungimas
-                  
+
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           //google button
                           SquareTile(
-                              onTap: () => AuthService().signInWithGoogle(),
+                            onTap: () => AuthService().signInWithGoogle(),
                               imagePath: 'lib/login/loginPageFoto/google.png'
                           ),
-                  
-                          const SizedBox(width: 20),
-                  
+
+                          SizedBox(width: 20),
+
                           //apple button
                           SquareTile(
-                              onTap: (){
+                            onTap: (){
 
-                              },
+                            },
                               imagePath: 'lib/login/loginPageFoto/apple.png'
                           )
-                  
+
                         ],
                       ),
                       const SizedBox(height: 50),
-                  
+
                       //naujas vartotojas? registruotis
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                              'Naujas vartotojas?',
+                            'Ar jau turite paskyrą?',
                             style: TextStyle(
                               color: Color(0x80000000),
-                  
+
                             ),
                           ),
                           const SizedBox(width: 6),
                           GestureDetector(
                               onTap: widget.onTap,
-                              child: const Text(
-                                  'Registruotis.'
+                              child: Text(
+                                  'Prisijungti.'
                               )
                           ),
                         ],
                       )
-                  
+
                     ],
-                  
+
                   ),
                 ),
               )
