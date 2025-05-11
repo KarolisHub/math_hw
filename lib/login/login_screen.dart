@@ -79,8 +79,8 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Container(
                 color: Colors.transparent,
                 child: //logo
-                Center(
-                  child: const Icon(
+                const Center(
+                  child: Icon(
                     Icons.lock,
                     size: 150,
                   ),
@@ -186,15 +186,18 @@ class _LoginScreenState extends State<LoginScreen> {
                               imagePath: 'lib/login/loginPageFoto/google.png'
                           ),
                   
-                          const SizedBox(width: 20),
+                          //const SizedBox(width: 20),
                   
                           //apple button
+                          /*
                           SquareTile(
                               onTap: (){
 
                               },
                               imagePath: 'lib/login/loginPageFoto/apple.png'
                           )
+
+                           */
                   
                         ],
                       ),

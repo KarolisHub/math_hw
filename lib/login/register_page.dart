@@ -44,7 +44,6 @@ class _RegisterPageState extends State<RegisterPage> {
         );
       }else{
         //blogai pakartotas slaptažodis
-        wrongPasswordMessage();
         showErrorMessage("Slaptažodis nesutampa");
       }
 
@@ -73,17 +72,6 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  //wrong password message popup
-  void wrongPasswordMessage(){
-    showDialog(
-        context: context,
-        builder: (context){
-          return const AlertDialog(
-            title: Text('Blogas slpatažodis'),
-          );
-        }
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -197,15 +185,17 @@ class _RegisterPageState extends State<RegisterPage> {
                               imagePath: 'lib/login/loginPageFoto/google.png'
                           ),
 
-                          SizedBox(width: 20),
+                          //SizedBox(width: 20),
 
                           //apple button
+                          /*
                           SquareTile(
                             onTap: (){
 
                             },
                               imagePath: 'lib/login/loginPageFoto/apple.png'
                           )
+                          */
 
                         ],
                       ),
