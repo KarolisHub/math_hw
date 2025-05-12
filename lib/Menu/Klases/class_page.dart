@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../Namų darbai/homework_page.dart';
 import 'services/class_service.dart';
 import 'class_members_page.dart';
 import 'widgets/class_card.dart';
@@ -75,6 +76,40 @@ class _ClassPageState extends State<ClassPage> with SingleTickerProviderStateMix
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Nepavyko palikti klasės: ${e.toString()} bandykite dar kartą vėliau'))
+      );
+    }
+  }
+
+  Future<void> _deleteClass(String classId, String className) async {
+    bool confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Ištrinti klasę'),
+        content: Text('Ar tikrai norite ištrinti klasę "$className"? Šis veiksmas negrįžtamas.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Atšaukti'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Ištrinti'),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    if (!confirm) return;
+
+    try {
+      await _classService.deleteClass(classId);
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Klasė "$className" sėkmingai ištrinta'))
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Nepavyko ištrinti klasės: ${e.toString()}'))
       );
     }
   }
@@ -176,10 +211,18 @@ class _ClassPageState extends State<ClassPage> with SingleTickerProviderStateMix
                             ),
                           );
                         },
+                        onDeleteClass: () => _deleteClass(classId, classData['name']),
                         onLeaveClass: () => _leaveClass(classId, classData['name']),
                         onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Class detail page coming soon!'))
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => HomeworkPage(
+                                classId: classId,
+                                className: classData['name'],
+                                isCreator: isCreator,
+                              ),
+                            ),
                           );
                         },
                       );

@@ -46,7 +46,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '718178402915',
     projectId: 'math-hw-auth',
     authDomain: 'math-hw-auth.firebaseapp.com',
-    storageBucket: 'math-hw-auth.firebasestorage.app',
+    storageBucket: 'math-hw-auth.appspot.com',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -54,7 +54,7 @@ class DefaultFirebaseOptions {
     appId: '1:718178402915:android:b86b9e7e3c5fa1b3466e56',
     messagingSenderId: '718178402915',
     projectId: 'math-hw-auth',
-    storageBucket: 'math-hw-auth.firebasestorage.app',
+    storageBucket: 'math-hw-auth.appspot.com',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
@@ -62,7 +62,7 @@ class DefaultFirebaseOptions {
     appId: '1:718178402915:ios:9beac8136ab90fa2466e56',
     messagingSenderId: '718178402915',
     projectId: 'math-hw-auth',
-    storageBucket: 'math-hw-auth.firebasestorage.app',
+    storageBucket: 'math-hw-auth.appspot.com',
     iosBundleId: 'com.example.mathHw',
   );
 
@@ -71,7 +71,7 @@ class DefaultFirebaseOptions {
     appId: '1:718178402915:ios:9beac8136ab90fa2466e56',
     messagingSenderId: '718178402915',
     projectId: 'math-hw-auth',
-    storageBucket: 'math-hw-auth.firebasestorage.app',
+    storageBucket: 'math-hw-auth.appspot.com',
     iosBundleId: 'com.example.mathHw',
   );
 
@@ -81,6 +81,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '718178402915',
     projectId: 'math-hw-auth',
     authDomain: 'math-hw-auth.firebaseapp.com',
-    storageBucket: 'math-hw-auth.firebasestorage.app',
+    storageBucket: 'math-hw-auth.appspot.com',
   );
 }

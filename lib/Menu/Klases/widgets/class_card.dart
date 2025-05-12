@@ -8,6 +8,7 @@ class ClassCard extends StatelessWidget {
   final bool isCreator;
   final VoidCallback onRegenerateCode;
   final VoidCallback onManageMembers;
+  final VoidCallback onDeleteClass;
   final VoidCallback onLeaveClass;
   final VoidCallback onTap;
 
@@ -19,6 +20,7 @@ class ClassCard extends StatelessWidget {
     required this.isCreator,
     required this.onRegenerateCode,
     required this.onManageMembers,
+    required this.onDeleteClass,
     required this.onLeaveClass,
     required this.onTap,
   }) : super(key: key);
@@ -32,26 +34,66 @@ class ClassCard extends StatelessWidget {
         subtitle: Text(isCreator
             ? 'You created this class • Code: $joinCode'
             : 'You joined this class'),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isCreator)
-              IconButton(
-                icon: Icon(Icons.refresh),
-                tooltip: 'Regenerate join code',
-                onPressed: onRegenerateCode,
+        trailing: PopupMenuButton<String>(
+          onSelected: (value) {
+            switch (value) {
+              case 'regenerate':
+                onRegenerateCode();
+                break;
+              case 'manage':
+                onManageMembers();
+                break;
+              case 'delete':
+                onDeleteClass();
+                break;
+              case 'leave':
+                onLeaveClass();
+                break;
+            }
+          },
+          itemBuilder: (context) => [
+            if (isCreator) ...[
+              PopupMenuItem(
+                value: 'regenerate',
+                child: Row(
+                  children: [
+                    Icon(Icons.refresh, size: 20),
+                    SizedBox(width: 8),
+                    Text('Atnaujinti kodą'),
+                  ],
+                ),
               ),
-            isCreator
-                ? IconButton(
-                    icon: Icon(Icons.group),
-                    tooltip: 'Manage members',
-                    onPressed: onManageMembers,
-                  )
-                : IconButton(
-                    icon: Icon(Icons.exit_to_app),
-                    tooltip: 'Leave class',
-                    onPressed: onLeaveClass,
-                  ),
+              PopupMenuItem(
+                value: 'manage',
+                child: Row(
+                  children: [
+                    Icon(Icons.people, size: 20),
+                    SizedBox(width: 8),
+                    Text('Tvarkyti narius'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, size: 20, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Ištrinti klasę', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ] else
+              PopupMenuItem(
+                value: 'leave',
+                child: Row(
+                  children: [
+                    Icon(Icons.exit_to_app, size: 20),
+                    SizedBox(width: 8),
+                    Text('Palikti klasę'),
+                  ],
+                ),
+              ),
           ],
         ),
         onTap: onTap,

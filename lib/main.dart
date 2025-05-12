@@ -3,12 +3,23 @@ import 'package:math_hw/login/auth_page.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
-void main() async{
-
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  
+  try {
+    // Check if Firebase is already initialized
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } else {
+      // Use the existing app instance
+      Firebase.app();
+    }
+  } catch (e) {
+    print('Error initializing Firebase: $e');
+  }
+  
   runApp(const MyApp());
 }
 

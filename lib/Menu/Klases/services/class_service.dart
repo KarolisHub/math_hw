@@ -213,4 +213,37 @@ class ClassService {
         .where('class_id', isEqualTo: classId)
         .snapshots();
   }
+
+  // Delete a class
+  Future<void> deleteClass(String classId) async {
+    final User? currentUser = _auth.currentUser;
+    if (currentUser == null) {
+      throw Exception("User not logged in");
+    }
+
+    // Get class document to verify creator
+    DocumentSnapshot classDoc = await _firestore.collection('classes').doc(classId).get();
+    if (!classDoc.exists) {
+      throw Exception("Class not found");
+    }
+
+    Map<String, dynamic> classData = classDoc.data() as Map<String, dynamic>;
+    if (classData['creator_id'] != currentUser.uid) {
+      throw Exception("Only the class creator can delete the class");
+    }
+
+    // Delete all class members
+    QuerySnapshot memberQuery = await _firestore
+        .collection('class_members')
+        .where('class_id', isEqualTo: classId)
+        .get();
+
+    // Delete each member document
+    for (var doc in memberQuery.docs) {
+      await doc.reference.delete();
+    }
+
+    // Delete the class document
+    await classDoc.reference.delete();
+  }
 } 

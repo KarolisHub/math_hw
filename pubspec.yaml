@@ -45,6 +45,7 @@ dependencies:
   camera: ^0.10.5+9
   webview_flutter: ^4.7.0
   math_keyboard: ^0.3.2
+  firebase_storage: ^11.6.0
 
 dev_dependencies:
   flutter_test:
