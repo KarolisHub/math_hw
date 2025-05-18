@@ -65,6 +65,8 @@ class SubmissionList extends StatelessWidget {
           feedback: feedbackControllers[i].text.isEmpty
               ? null
               : feedbackControllers[i].text,
+          answerType: submission.tasks[i].answerType,
+          latexContent: submission.tasks[i].latexContent,
         ));
       }
 
@@ -115,7 +117,7 @@ class SubmissionList extends StatelessWidget {
                               if (snapshot.hasData) {
                                 final userData = snapshot.data!.data() as Map<String, dynamic>?;
                                 return Text(
-                                  userData?['name'] ?? 'Nežinomas vartotojas',
+                                  '${userData?['name'] ?? 'Nežinomas'} ${userData?['surname'] ?? 'Vartotojas'}',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
@@ -203,6 +205,7 @@ class _GradeDialog extends StatefulWidget {
 
 class _GradeDialogState extends State<_GradeDialog> {
   late double _totalScore;
+  final List<double> _availableScores = [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0];
 
   @override
   void initState() {
@@ -293,22 +296,26 @@ class _GradeDialogState extends State<_GradeDialog> {
                       Row(
                         children: [
                           Expanded(
-                            child: TextField(
-                              controller: widget.scoreControllers[index],
+                            child: DropdownButtonFormField<double>(
+                              value: double.tryParse(widget.scoreControllers[index].text) ?? 0.0,
                               decoration: InputDecoration(
                                 labelText: 'Balas',
                                 border: OutlineInputBorder(),
                                 suffixText: '/${originalTask.maxScore}',
                               ),
-                              keyboardType: TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
+                              items: _availableScores
+                                  .where((score) => originalTask.maxScore == null || score <= originalTask.maxScore!)
+                                  .map((score) {
+                                return DropdownMenuItem<double>(
+                                  value: score,
+                                  child: Text(score.toStringAsFixed(1)),
+                                );
+                              }).toList(),
                               onChanged: (value) {
-                                final score = double.tryParse(value) ?? 0.0;
-                                if (originalTask.maxScore != null && score > originalTask.maxScore!) {
-                                  throw 'Balas negali būti didesnis už ${originalTask.maxScore!.toStringAsFixed(1)}';
+                                if (value != null) {
+                                  widget.scoreControllers[index].text = value.toString();
+                                  _updateTotalScore();
                                 }
-                                _updateTotalScore();
                               },
                             ),
                           ),

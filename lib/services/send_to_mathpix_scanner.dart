@@ -19,7 +19,7 @@ class MathpixScanner {
     // Compress the image first
     final compressedBytes = await FlutterImageCompress.compressWithFile(
       imageFile.absolute.path,
-      quality: 40,
+      quality: 85,
       format: CompressFormat.jpeg,
     );
 

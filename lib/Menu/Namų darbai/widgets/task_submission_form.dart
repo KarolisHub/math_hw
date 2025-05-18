@@ -3,6 +3,9 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../models/homework_model.dart';
 import '../services/homework_service.dart';
+import '../../../services/send_to_mathpix_scanner.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
+import 'package:math_keyboard/math_keyboard.dart';
 
 class TaskSubmissionForm extends StatefulWidget {
   final List<HomeworkTask> tasks;
@@ -23,7 +26,9 @@ class TaskSubmissionForm extends StatefulWidget {
 class _TaskSubmissionFormState extends State<TaskSubmissionForm> {
   final List<TextEditingController> _answerControllers = [];
   final List<File?> _photos = [];
+  final List<String?> _latexContents = [];
   final HomeworkService _homeworkService = HomeworkService();
+  final MathpixScanner _mathpixScanner = MathpixScanner();
   String? _errorMessage;
 
   @override
@@ -32,6 +37,7 @@ class _TaskSubmissionFormState extends State<TaskSubmissionForm> {
     for (var task in widget.tasks) {
       _answerControllers.add(TextEditingController());
       _photos.add(null);
+      _latexContents.add(null);
     }
   }
 
@@ -61,6 +67,23 @@ class _TaskSubmissionFormState extends State<TaskSubmissionForm> {
     } catch (e) {
       setState(() {
         _errorMessage = 'Klaida pasirenkant nuotrauką: ${e.toString()}';
+      });
+    }
+  }
+
+  Future<void> _scanMathpix(int taskIndex) async {
+    try {
+      final file = await _mathpixScanner.pickImage();
+      if (file != null) {
+        final result = await _mathpixScanner.sendToMathpix(file);
+        setState(() {
+          _latexContents[taskIndex] = result;
+          _answerControllers[taskIndex].text = result;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Klaida skenuojant: ${e.toString()}';
       });
     }
   }
@@ -104,6 +127,8 @@ class _TaskSubmissionFormState extends State<TaskSubmissionForm> {
           taskId: widget.tasks[i].taskId,
           answer: _answerControllers[i].text,
           photoUrl: photoUrl,
+          answerType: widget.tasks[i].taskType,
+          latexContent: _latexContents[i],
         ));
       }
 
@@ -115,126 +140,157 @@ class _TaskSubmissionFormState extends State<TaskSubmissionForm> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildLatexPreview(String? latex) {
+    if (latex == null || latex.isEmpty) {
+      return SizedBox.shrink();
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Pateikti namų darbus',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        SizedBox(height: 16),
-        ...widget.tasks.asMap().entries.map((entry) {
-          final index = entry.key;
-          final task = entry.value;
-          return Card(
-            margin: EdgeInsets.only(bottom: 16),
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          task.title,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        '${task.maxScore?.toStringAsFixed(1) ?? 'Nenustatyta'} balai',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  Text(task.description),
-                  SizedBox(height: 16),
-                  TextField(
-                    controller: _answerControllers[index],
-                    decoration: InputDecoration(
-                      labelText: 'Jūsų atsakymas',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 5,
-                  ),
-                  if (task.photoRequired) ...[
-                    SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Reikalinga nuotrauka',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ),
-                        ElevatedButton.icon(
-                          onPressed: () => _pickImage(index),
-                          icon: Icon(Icons.photo),
-                          label: Text(_photos[index] == null ? 'Pridėti' : 'Pakeisti'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFFA500),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (_photos[index] != null) ...[
-                      SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          _photos[index]!,
-                          height: 200,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ],
-                  ],
-                ],
-              ),
-            ),
-          );
-        }).toList(),
-        if (_errorMessage != null)
-          Padding(
-            padding: EdgeInsets.only(bottom: 16),
-            child: Text(
-              _errorMessage!,
-              style: TextStyle(color: Colors.red),
-              textAlign: TextAlign.center,
-            ),
+        SizedBox(height: 8),
+        Text('Peržiūra:', style: TextStyle(fontWeight: FontWeight.bold)),
+        SizedBox(height: 4),
+        Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(8),
           ),
-        ElevatedButton(
-          onPressed: widget.isSubmitting ? null : _submitForm,
-          child: widget.isSubmitting
-              ? SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-              : Text('Pateikti'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFFFA500),
-            minimumSize: Size(double.infinity, 48),
+          child: Math.tex(
+            latex,
+            textStyle: TextStyle(fontSize: 18),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAnswerInput(int index, HomeworkTask task) {
+    switch (task.taskType) {
+      case 'text':
+        return TextField(
+          controller: _answerControllers[index],
+          decoration: InputDecoration(
+            labelText: 'Atsakymas',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+        );
+      
+      case 'handwriting':
+        return Column(
+          children: [
+            if (_photos[index] != null)
+              Image.file(
+                _photos[index]!,
+                height: 200,
+                fit: BoxFit.contain,
+              ),
+            ElevatedButton.icon(
+              onPressed: () => _pickImage(index),
+              icon: Icon(Icons.photo_camera),
+              label: Text('Pridėti nuotrauką'),
+            ),
+          ],
+        );
+      
+      case 'image':
+        return Column(
+          children: [
+            if (_photos[index] != null)
+              Image.file(
+                _photos[index]!,
+                height: 200,
+                fit: BoxFit.contain,
+              ),
+            ElevatedButton.icon(
+              onPressed: () => _pickImage(index),
+              icon: Icon(Icons.photo_library),
+              label: Text('Pasirinkti nuotrauką'),
+            ),
+          ],
+        );
+      
+      case 'mathpix':
+        return Column(
+          children: [
+            if (_latexContents[index] != null) ...[
+              Text('LaTeX: ${_latexContents[index]}'),
+              _buildLatexPreview(_latexContents[index]),
+            ],
+            ElevatedButton.icon(
+              onPressed: () => _scanMathpix(index),
+              icon: Icon(Icons.camera_alt),
+              label: Text('Skenuoti'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        );
+      
+      default:
+        return TextField(
+          controller: _answerControllers[index],
+          decoration: InputDecoration(
+            labelText: 'Atsakymas',
+            border: OutlineInputBorder(),
+          ),
+        );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ...widget.tasks.asMap().entries.map((entry) {
+            final index = entry.key;
+            final task = entry.value;
+            return Card(
+              margin: EdgeInsets.only(bottom: 16),
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Užduotis ${index + 1}: ${task.title}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    if (task.description.isNotEmpty) ...[
+                      SizedBox(height: 8),
+                      Text(task.description),
+                    ],
+                    SizedBox(height: 16),
+                    _buildAnswerInput(index, task),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+          
+          if (_errorMessage != null)
+            Padding(
+              padding: EdgeInsets.only(bottom: 16),
+              child: Text(
+                _errorMessage!,
+                style: TextStyle(color: Colors.red),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          
+          ElevatedButton(
+            onPressed: widget.isSubmitting ? null : _submitForm,
+            child: widget.isSubmitting
+                ? CircularProgressIndicator()
+                : Text('Pateikti namų darbus'),
+          ),
+        ],
+      ),
     );
   }
 } 

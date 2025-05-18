@@ -29,7 +29,7 @@ class ClassService {
   Future<String> createClass(String className) async {
     final User? currentUser = _auth.currentUser;
     if (currentUser == null) {
-      throw Exception("User not logged in");
+      throw Exception("Vartotojas neprisijungęs");
     }
 
     String joinCode = await generateUniqueClassCode();
@@ -60,7 +60,7 @@ class ClassService {
   Future<String> joinClass(String code) async {
     final User? currentUser = _auth.currentUser;
     if (currentUser == null) {
-      throw Exception("User not logged in");
+      throw Exception("Vartotojas neprisijungęs");
     }
 
     QuerySnapshot query = await _firestore.collection('classes')
@@ -70,14 +70,14 @@ class ClassService {
         .get();
 
     if (query.docs.isEmpty) {
-      throw Exception("No active class found with this code");
+      throw Exception("Nerasta klasių su šiuo kodu. Patikrinkite ar gerai suvedėte kodą");
     }
 
     DocumentSnapshot classDoc = query.docs.first;
     Map<String, dynamic> classData = classDoc.data() as Map<String, dynamic>;
 
     if (classData['current_member_count'] >= classData['max_members']) {
-      throw Exception("Class is full");
+      throw Exception("Klasė yra pilna");
     }
 
     QuerySnapshot memberQuery = await _firestore
@@ -87,7 +87,7 @@ class ClassService {
         .get();
 
     if (memberQuery.docs.isNotEmpty) {
-      throw Exception("You are already a member of this class");
+      throw Exception("Tu jau esi šios klasės dalyvis");
     }
 
     await _firestore.collection('class_members').add({
@@ -108,14 +108,14 @@ class ClassService {
   Future<String> regenerateClassCode(String classId) async {
     final User? currentUser = _auth.currentUser;
     if (currentUser == null) {
-      throw Exception("User not logged in");
+      throw Exception("Vartotojas neprisijungęs");
     }
 
     DocumentSnapshot classDoc = await _firestore.collection('classes').doc(classId).get();
     Map<String, dynamic> classData = classDoc.data() as Map<String, dynamic>;
 
     if (classData['creator_id'] != currentUser.uid) {
-      throw Exception('Only the class creator can regenerate the join code');
+      throw Exception('Tik klasės kūrėjas gali atnaujinti kodą');
     }
 
     String newCode = await generateUniqueClassCode();
@@ -133,7 +133,7 @@ class ClassService {
   Future<void> leaveClass(String classId) async {
     final User? currentUser = _auth.currentUser;
     if (currentUser == null) {
-      throw Exception("User not logged in");
+      throw Exception("Vartotojas neprisijungęs");
     }
 
     QuerySnapshot memberQuery = await _firestore
@@ -143,12 +143,12 @@ class ClassService {
         .get();
 
     if (memberQuery.docs.isEmpty) {
-      throw Exception("You are not a member of this class");
+      throw Exception("Jūs neesate šios klasės dalyvis");
     }
 
     String role = memberQuery.docs.first.get('role');
     if (role == 'creator') {
-      throw Exception("As the creator, you cannot leave the class. You can delete it instead.");
+      throw Exception("Negalite palikti šios klasės, nes esate jos kūrėjas");
     }
 
     await _firestore.collection('class_members')
@@ -164,14 +164,14 @@ class ClassService {
   Future<void> removeMember(String classId, String userId) async {
     final User? currentUser = _auth.currentUser;
     if (currentUser == null) {
-      throw Exception("User not logged in");
+      throw Exception("Vartotojas neprisijungęs");
     }
 
     DocumentSnapshot classDoc = await _firestore.collection('classes').doc(classId).get();
     Map<String, dynamic> classData = classDoc.data() as Map<String, dynamic>;
 
     if (classData['creator_id'] != currentUser.uid) {
-      throw Exception('Only the class creator can remove members');
+      throw Exception('Tik klasės kūrėjas gali pašalinti dalyvį');
     }
 
     QuerySnapshot memberQuery = await _firestore
@@ -181,7 +181,7 @@ class ClassService {
         .get();
 
     if (memberQuery.docs.isEmpty) {
-      throw Exception("User is not a member of this class");
+      throw Exception("Jūs neesate šios klasės dalyvis");
     }
 
     await _firestore.collection('class_members')
@@ -197,7 +197,7 @@ class ClassService {
   Stream<QuerySnapshot> getUserClassesStream() {
     final User? currentUser = _auth.currentUser;
     if (currentUser == null) {
-      throw Exception("User not logged in");
+      throw Exception("Vartotojas neprisijungęs");
     }
 
     return _firestore
@@ -218,18 +218,18 @@ class ClassService {
   Future<void> deleteClass(String classId) async {
     final User? currentUser = _auth.currentUser;
     if (currentUser == null) {
-      throw Exception("User not logged in");
+      throw Exception("Vartotojas neprisijungęs");
     }
 
     // Get class document to verify creator
     DocumentSnapshot classDoc = await _firestore.collection('classes').doc(classId).get();
     if (!classDoc.exists) {
-      throw Exception("Class not found");
+      throw Exception("Klasė nerasta");
     }
 
     Map<String, dynamic> classData = classDoc.data() as Map<String, dynamic>;
     if (classData['creator_id'] != currentUser.uid) {
-      throw Exception("Only the class creator can delete the class");
+      throw Exception("Tik klasės kūrėjas gali ištrinti klasę");
     }
 
     // Delete all class members

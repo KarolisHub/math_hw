@@ -26,16 +26,16 @@ class _ClassMembersPageState extends State<ClassMembersPage> {
     bool confirm = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Remove Member'),
-        content: Text('Are you sure you want to remove $userName from the class?'),
+        title: Text('Pašalinti vartotoją'),
+        content: Text('Ar tikrai norite pašalinti vartotoją $userName iš klasės?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Cancel'),
+            child: Text('Atšaukti'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text('Remove'),
+            child: Text('Pašalinti'),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
           ),
         ],
@@ -47,11 +47,11 @@ class _ClassMembersPageState extends State<ClassMembersPage> {
     try {
       await _classService.removeMember(widget.classId, userId);
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Member removed successfully'))
+          SnackBar(content: Text('Vartotojas pašalintas sėkmingai'))
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to remove member: ${e.toString()}'))
+          SnackBar(content: Text('Nepavyko pašalinti vartotojo: ${e.toString()}. Bandykite vėliau dar kartą'))
       );
     }
   }
@@ -62,10 +62,10 @@ class _ClassMembersPageState extends State<ClassMembersPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.className} - Members'),
+        title: Text('${widget.className} - Vartotojai'),
       ),
       body: currentUser == null
-          ? Center(child: Text('Please login to view members'))
+          ? Center(child: Text('Prašome prisijungti norint matyti klasės vartotojus'))
           : StreamBuilder<QuerySnapshot>(
         stream: _classService.getClassMembersStream(widget.classId),
         builder: (context, memberSnapshot) {
@@ -74,11 +74,11 @@ class _ClassMembersPageState extends State<ClassMembersPage> {
           }
 
           if (memberSnapshot.hasError) {
-            return Center(child: Text('Error: ${memberSnapshot.error}'));
+            return Center(child: Text('Klaida: ${memberSnapshot.error}'));
           }
 
           if (!memberSnapshot.hasData || memberSnapshot.data!.docs.isEmpty) {
-            return Center(child: Text('No members found'));
+            return Center(child: Text('Vartotojų nerasta'));
           }
 
           List<String> userIds = memberSnapshot.data!.docs
@@ -101,11 +101,11 @@ class _ClassMembersPageState extends State<ClassMembersPage> {
               }
 
               if (userSnapshot.hasError) {
-                return Center(child: Text('Error: ${userSnapshot.error}'));
+                return Center(child: Text('Klaida: ${userSnapshot.error}'));
               }
 
               if (!userSnapshot.hasData) {
-                return Center(child: Text('No member data found'));
+                return Center(child: Text('Vartotojo informacija nerasta'));
               }
 
               Map<String, Map<String, dynamic>> userInfo = {};
@@ -128,11 +128,11 @@ class _ClassMembersPageState extends State<ClassMembersPage> {
                       child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?'),
                     ),
                     title: Text(name),
-                    subtitle: Text(isCreator ? 'Creator' : 'Member'),
+                    subtitle: Text(isCreator ? 'Kūrėjas' : 'Dalyvis'),
                     trailing: !isSelf && !isCreator
                         ? IconButton(
                       icon: Icon(Icons.remove_circle_outline),
-                      tooltip: 'Remove member',
+                      tooltip: 'Pašalinti dalyvį',
                       onPressed: () => _removeMember(userId, name),
                     )
                         : null,

@@ -6,6 +6,8 @@ class HomeworkTask {
   final String description;
   final double? maxScore;
   final bool photoRequired;
+  final String taskType; // 'text', 'handwriting', 'image', 'mathpix'
+  final String? latexContent; // For mathpix tasks
 
   HomeworkTask({
     required this.taskId,
@@ -13,6 +15,8 @@ class HomeworkTask {
     this.description = '',
     this.maxScore,
     required this.photoRequired,
+    required this.taskType,
+    this.latexContent,
   });
 
   Map<String, dynamic> toMap() {
@@ -22,6 +26,8 @@ class HomeworkTask {
       'description': description,
       'maxScore': maxScore,
       'photoRequired': photoRequired,
+      'taskType': taskType,
+      'latexContent': latexContent,
     };
   }
 
@@ -32,6 +38,8 @@ class HomeworkTask {
       description: map['description'] as String,
       maxScore: map['maxScore'] != null ? (map['maxScore'] as num).toDouble() : null,
       photoRequired: map['photoRequired'] as bool,
+      taskType: map['taskType'] as String,
+      latexContent: map['latexContent'] as String?,
     );
   }
 }
@@ -80,6 +88,8 @@ class TaskSubmission {
   final String? photoUrl;
   final double? score;
   final String? feedback;
+  final String answerType; // 'text', 'handwriting', 'image', 'mathpix'
+  final String? latexContent; // For mathpix answers
 
   TaskSubmission({
     required this.taskId,
@@ -87,6 +97,8 @@ class TaskSubmission {
     this.photoUrl,
     this.score,
     this.feedback,
+    required this.answerType,
+    this.latexContent,
   });
 
   Map<String, dynamic> toMap() {
@@ -96,6 +108,8 @@ class TaskSubmission {
       'photoUrl': photoUrl,
       'score': score,
       'feedback': feedback,
+      'answerType': answerType,
+      'latexContent': latexContent,
     };
   }
 
@@ -106,6 +120,8 @@ class TaskSubmission {
       photoUrl: map['photoUrl'] as String?,
       score: map['score'] != null ? (map['score'] as num).toDouble() : null,
       feedback: map['feedback'] as String?,
+      answerType: map['answerType'] as String,
+      latexContent: map['latexContent'] as String?,
     );
   }
 }

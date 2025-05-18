@@ -22,7 +22,7 @@ class _JoinClassFormState extends State<JoinClassForm> {
 
   Future<void> _joinClass() async {
     if (_joinCodeController.text.trim().isEmpty) {
-      widget.onError("Join code cannot be empty");
+      widget.onError("Prisijungimo kodo laukas negali būti tuščias");
       return;
     }
 
@@ -58,14 +58,14 @@ class _JoinClassFormState extends State<JoinClassForm> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Join a Class',
+              'Prisijungti prie klasės',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             SizedBox(height: 16),
             TextField(
               controller: _joinCodeController,
               decoration: InputDecoration(
-                labelText: 'Enter 6-digit join code',
+                labelText: 'Įveskite prisijungimo kodą',
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,
@@ -80,7 +80,7 @@ class _JoinClassFormState extends State<JoinClassForm> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text('Join Class'),
+                  : Text('Prisijungti'),
               style: ElevatedButton.styleFrom(
                 minimumSize: Size(double.infinity, 50),
               ),

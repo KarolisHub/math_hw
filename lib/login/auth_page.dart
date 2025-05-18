@@ -2,9 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:math_hw/Menu/menu_screen.dart';
 import 'package:math_hw/login/login_or_register.dart';
-import 'package:math_hw/login/login_screen.dart';
-
-import '../Home/camera_page.dart';
 
 class AuthPage extends StatelessWidget {
   const AuthPage({super.key});
@@ -14,17 +11,25 @@ class AuthPage extends StatelessWidget {
     return Scaffold(
       body: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot){
-          //user is logged in
-          if(snapshot.hasData){
-            //return GoogleVisionExample();
-            //return CameraOCR();
-            return MenuScreen();
+        builder: (context, snapshot) {
+          // Show loading indicator while checking auth state
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFFFFA500),
+                ),
+              ),
+            );
           }
-          // user is not logged in
-          else{
-            return LoginOrRegister();
+          
+          // User is logged in
+          if (snapshot.hasData) {
+            return const MenuScreen();
           }
+          
+          // User is not logged in
+          return const LoginOrRegister();
         },
       ),
     );

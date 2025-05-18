@@ -152,7 +152,7 @@ class _CommentSectionState extends State<CommentSection> {
                                 final userData =
                                     snapshot.data!.data() as Map<String, dynamic>?;
                                 return Text(
-                                  userData?['name'] ?? 'Nežinomas vartotojas',
+                                  '${userData?['name'] ?? 'Nežinomas'} ${userData?['surname'] ?? 'Vartotojas'}',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: comment.userId == _auth.currentUser?.uid

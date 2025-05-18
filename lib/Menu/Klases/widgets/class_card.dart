@@ -32,8 +32,8 @@ class ClassCard extends StatelessWidget {
       child: ListTile(
         title: Text(className),
         subtitle: Text(isCreator
-            ? 'You created this class • Code: $joinCode'
-            : 'You joined this class'),
+            ? 'Jūsų sukurta klasė • Kodas: $joinCode'
+            : 'Jūs esate šios klasės dalyvis'),
         trailing: PopupMenuButton<String>(
           onSelected: (value) {
             switch (value) {

@@ -97,8 +97,8 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Arkhivuoti namų darbus'),
-        content: Text('Ar tikrai norite arkhivuoti šiuos namų darbus?'),
+        title: Text('Archyvuoti namų darbą'),
+        content: Text('Ar tikrai norite archyvuoti šį namų darbą?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -106,7 +106,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text('Arkhivuoti'),
+            child: Text('Archyvuoti'),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
           ),
         ],
@@ -122,7 +122,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Klaida arkhivuojant: ${e.toString()}')),
+            SnackBar(content: Text('Klaida archyvuojant: ${e.toString()}')),
           );
         }
       }
@@ -220,7 +220,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
                 ),
                 PopupMenuItem(
                   value: 'archive',
-                  child: Text('Arkhivuoti'),
+                  child: Text('Archyvuoti'),
                 ),
                 PopupMenuItem(
                   value: 'delete',

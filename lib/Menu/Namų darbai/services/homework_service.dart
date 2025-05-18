@@ -18,7 +18,7 @@ class HomeworkService {
     required List<HomeworkTask> tasks,
   }) async {
     final user = _auth.currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw Exception('Nepavyko nustatyti vartotojo');
 
     final homeworkRef = _firestore.collection('homeworks').doc();
     final totalScore = tasks.fold(0.0, (sum, task) => sum + (task.maxScore ?? 0.0));
@@ -45,7 +45,7 @@ class HomeworkService {
   // Get homework by ID
   Future<Homework> getHomework(String homeworkId) async {
     final doc = await _firestore.collection('homeworks').doc(homeworkId).get();
-    if (!doc.exists) throw Exception('Homework not found');
+    if (!doc.exists) throw Exception('Namų darbas nerastas');
     return Homework.fromMap(doc.id, doc.data()!);
   }
 
@@ -81,15 +81,15 @@ class HomeworkService {
     required List<TaskSubmission> taskSubmissions,
   }) async {
     final user = _auth.currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw Exception('Nepavyko nustatyti vartotojo');
 
     final homeworkRef = _firestore.collection('homeworks').doc(homeworkId);
     final homework = await getHomework(homeworkId);
 
     // Check if homework is active and not past due date
-    if (!homework.isActive) throw Exception('Homework is not active');
+    if (!homework.isActive) throw Exception('Namų darbas yra neaktyvus');
     if (DateTime.now().isAfter(homework.dueDate)) {
-      throw Exception('Homework submission deadline has passed');
+      throw Exception('Namų darbo atlikimo laikas baigtas');
     }
 
     // Check if user has already submitted
@@ -102,30 +102,32 @@ class HomeworkService {
     }
 
     if (hasSubmitted) {
-      throw Exception('You have already submitted this homework');
+      throw Exception('Jau esate pateikę šį namų darbą');
     }
 
     final submission = HomeworkSubmission(
       userId: user.uid,
       submittedAt: DateTime.now(),
-      status: 'SUBMITTED',
+      status: 'PATEIKTA',
       tasks: taskSubmissions,
       totalScore: 0.0, // Will be updated when graded
     );
 
+    // Add submission and move to "atlikti namu darbai" tab
     await homeworkRef.update({
-      'submissions': FieldValue.arrayUnion([submission.toMap()])
+      'submissions': FieldValue.arrayUnion([submission.toMap()]),
+      'isActive': false, // This will move it to "atlikti namu darbai" tab
     });
   }
 
   // Upload photo for task submission
   Future<String> uploadTaskPhoto(String homeworkId, String taskId, File photo) async {
     final user = _auth.currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw Exception('Nepavyko nustatyti vartotojo');
 
     // Validate file size (5MB limit)
     if (await photo.length() > 5 * 1024 * 1024) {
-      throw Exception('Photo size must be less than 5MB');
+      throw Exception('Nuotraukos dydis turi būti mažesnis nei 5MB');
     }
 
     try {
@@ -198,13 +200,13 @@ class HomeworkService {
 
     // Verify user is the creator
     if (_auth.currentUser?.uid != homework.creatorId) {
-      throw Exception('Only the homework creator can grade submissions');
+      throw Exception('Tik klasės vartotojas gali vertinti namų darbą');
     }
 
     // Find and update the submission
     final submissions = homework.submissions;
     final submissionIndex = submissions.indexWhere((sub) => sub.userId == userId);
-    if (submissionIndex == -1) throw Exception('Submission not found');
+    if (submissionIndex == -1) throw Exception('Pateikimas nerastas');
 
     final updatedSubmission = HomeworkSubmission(
       userId: userId,
@@ -228,7 +230,7 @@ class HomeworkService {
     bool isPinned = false,
   }) async {
     final user = _auth.currentUser;
-    if (user == null) throw Exception('User not authenticated');
+    if (user == null) throw Exception('Nepavyko nustatyti vartotojo');
 
     final homeworkRef = _firestore.collection('homeworks').doc(homeworkId);
     final homework = await getHomework(homeworkId);
@@ -261,7 +263,7 @@ class HomeworkService {
 
     // Verify user is the creator
     if (_auth.currentUser?.uid != homework.creatorId) {
-      throw Exception('Only the homework creator can update the deadline');
+      throw Exception('Tik namų darbo kūrėjas gali atnaujinti laiką');
     }
 
     await homeworkRef.update({
@@ -277,7 +279,7 @@ class HomeworkService {
 
     // Verify user is the creator
     if (_auth.currentUser?.uid != homework.creatorId) {
-      throw Exception('Only the homework creator can archive homework');
+      throw Exception('Tik namų darbo kūrėjas gali archyvuoti namų darbą');
     }
 
     await homeworkRef.update({'isActive': false});
@@ -290,7 +292,7 @@ class HomeworkService {
 
     // Verify user is the creator
     if (_auth.currentUser?.uid != homework.creatorId) {
-      throw Exception('Only the homework creator can delete homework');
+      throw Exception('Tik namų darbo kūrėjas gali ištrinti namų darbą');
     }
 
     // Delete all associated photos
@@ -302,7 +304,7 @@ class HomeworkService {
             await photoRef.delete();
           } catch (e) {
             // Log error but continue with deletion
-            print('Error deleting photo: $e');
+            print('Nepavyko ištrinti nuotraukos: $e. Bandykite vėliau');
           }
         }
       }
