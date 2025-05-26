@@ -1,45 +1,60 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomeworkTask {
-  final String taskId;
+  final String id;
   final String title;
   final String description;
+  final String type;
   final double? maxScore;
+  final String? photoUrl;
+  final String? mathpixResponse;
   final bool photoRequired;
-  final String taskType; // 'text', 'handwriting', 'image', 'mathpix'
-  final String? latexContent; // For mathpix tasks
+  final String taskType;
+  final String? latexContent;
 
   HomeworkTask({
-    required this.taskId,
+    required this.id,
     required this.title,
-    this.description = '',
+    required this.description,
+    required this.type,
     this.maxScore,
+    this.photoUrl,
+    this.mathpixResponse,
     required this.photoRequired,
     required this.taskType,
     this.latexContent,
   });
 
+  // Add getter for taskId to maintain backward compatibility
+  String get taskId => id;
+
   Map<String, dynamic> toMap() {
     return {
-      'taskId': taskId,
-      'title': title,
-      'description': description,
-      'maxScore': maxScore,
-      'photoRequired': photoRequired,
-      'taskType': taskType,
-      'latexContent': latexContent,
+      'id': id,
+      'pavadinimas': title,
+      'aprasymas': description,
+      'tipas': type,
+      'maksimalus_balas': maxScore,
+      'nuotraukos_url': photoUrl,
+      'mathpix_atsakymas': mathpixResponse,
+      'reikalinga_nuotrauka': photoRequired,
+      'uzduoties_tipas': taskType,
+      'latex_turinys': latexContent,
     };
   }
 
   factory HomeworkTask.fromMap(Map<String, dynamic> map) {
     return HomeworkTask(
-      taskId: map['taskId'] as String,
-      title: map['title'] as String,
-      description: map['description'] as String,
-      maxScore: map['maxScore'] != null ? (map['maxScore'] as num).toDouble() : null,
-      photoRequired: map['photoRequired'] as bool,
-      taskType: map['taskType'] as String,
-      latexContent: map['latexContent'] as String?,
+      id: map['id'] as String,
+      title: map['pavadinimas'] as String,
+      description: map['aprasymas'] as String,
+      type: map['tipas'] as String,
+      maxScore: map['maksimalus_balas'] != null ? (map['maksimalus_balas'] as num).toDouble() : null,
+      photoUrl: map['nuotraukos_url'] as String?,
+      mathpixResponse: map['mathpix_atsakymas'] as String?,
+      photoRequired: map['reikalinga_nuotrauka'] as bool,
+      taskType: map['uzduoties_tipas'] as String,
+      latexContent: map['latex_turinys'] as String?,
     );
   }
 }
@@ -84,44 +99,48 @@ class HomeworkSubmission {
 
 class TaskSubmission {
   final String taskId;
-  final String answer;
+  final String? answer;
   final String? photoUrl;
   final double? score;
   final String? feedback;
-  final String answerType; // 'text', 'handwriting', 'image', 'mathpix'
-  final String? latexContent; // For mathpix answers
+  final String? mathpixResponse;
+  final String answerType;
+  final String? latexContent;
 
   TaskSubmission({
     required this.taskId,
-    required this.answer,
+    this.answer,
     this.photoUrl,
     this.score,
     this.feedback,
+    this.mathpixResponse,
     required this.answerType,
     this.latexContent,
   });
 
   Map<String, dynamic> toMap() {
     return {
-      'taskId': taskId,
-      'answer': answer,
-      'photoUrl': photoUrl,
-      'score': score,
-      'feedback': feedback,
-      'answerType': answerType,
-      'latexContent': latexContent,
+      'uzduoties_id': taskId,
+      'atsakymas': answer,
+      'nuotraukos_url': photoUrl,
+      'balas': score,
+      'atsiliepimas': feedback,
+      'mathpix_atsakymas': mathpixResponse,
+      'atsakymo_tipas': answerType,
+      'latex_turinys': latexContent,
     };
   }
 
   factory TaskSubmission.fromMap(Map<String, dynamic> map) {
     return TaskSubmission(
-      taskId: map['taskId'] as String,
-      answer: map['answer'] as String,
-      photoUrl: map['photoUrl'] as String?,
-      score: map['score'] != null ? (map['score'] as num).toDouble() : null,
-      feedback: map['feedback'] as String?,
-      answerType: map['answerType'] as String,
-      latexContent: map['latexContent'] as String?,
+      taskId: map['uzduoties_id'] as String,
+      answer: map['atsakymas'] as String?,
+      photoUrl: map['nuotraukos_url'] as String?,
+      score: map['balas'] != null ? (map['balas'] as num).toDouble() : null,
+      feedback: map['atsiliepimas'] as String?,
+      mathpixResponse: map['mathpix_atsakymas'] as String?,
+      answerType: map['atsakymo_tipas'] as String,
+      latexContent: map['latex_turinys'] as String?,
     );
   }
 }
@@ -141,25 +160,25 @@ class HomeworkComment {
 
   Map<String, dynamic> toMap() {
     return {
-      'userId': userId,
-      'text': text,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'isPinned': isPinned,
+      'vartotojo_id': userId,
+      'tekstas': text,
+      'sukurimo_data': Timestamp.fromDate(createdAt),
+      'prisegtas': isPinned,
     };
   }
 
   factory HomeworkComment.fromMap(Map<String, dynamic> map) {
     return HomeworkComment(
-      userId: map['userId'] as String,
-      text: map['text'] as String,
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      isPinned: map['isPinned'] as bool? ?? false,
+      userId: map['vartotojo_id'] as String,
+      text: map['tekstas'] as String,
+      createdAt: (map['sukurimo_data'] as Timestamp).toDate(),
+      isPinned: map['prisegtas'] as bool? ?? false,
     );
   }
 }
 
 class Homework {
-  final String homeworkId;
+  final String id;
   final String title;
   final String description;
   final String classId;
@@ -173,7 +192,7 @@ class Homework {
   final List<HomeworkComment> comments;
 
   Homework({
-    required this.homeworkId,
+    required this.id,
     required this.title,
     required this.description,
     required this.classId,
@@ -187,40 +206,43 @@ class Homework {
     required this.comments,
   });
 
+  // Add getter for homeworkId to maintain backward compatibility
+  String get homeworkId => id;
+
   Map<String, dynamic> toMap() {
     return {
-      'title': title,
-      'description': description,
-      'classId': classId,
-      'creatorId': creatorId,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'dueDate': Timestamp.fromDate(dueDate),
-      'isActive': isActive,
-      'totalScore': totalScore,
+      'pavadinimas': title,
+      'aprasymas': description,
+      'klases_id': classId,
+      'kurejo_id': creatorId,
+      'sukurimo_data': Timestamp.fromDate(createdAt),
+      'terminas': Timestamp.fromDate(dueDate),
+      'aktyvus': isActive,
+      'bendras_balas': totalScore,
       'tasks': tasks.map((task) => task.toMap()).toList(),
-      'submissions': submissions.map((sub) => sub.toMap()).toList(),
+      'submissions': submissions.map((submission) => submission.toMap()).toList(),
       'comments': comments.map((comment) => comment.toMap()).toList(),
     };
   }
 
   factory Homework.fromMap(String id, Map<String, dynamic> map) {
     return Homework(
-      homeworkId: id,
-      title: map['title'] as String,
-      description: map['description'] as String,
-      classId: map['classId'] as String,
-      creatorId: map['creatorId'] as String,
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      dueDate: (map['dueDate'] as Timestamp).toDate(),
-      isActive: map['isActive'] as bool,
-      totalScore: (map['totalScore'] as num).toDouble(),
-      tasks: (map['tasks'] as List)
+      id: id,
+      title: map['pavadinimas'] as String,
+      description: map['aprasymas'] as String,
+      classId: map['klases_id'] as String,
+      creatorId: map['kurejo_id'] as String,
+      createdAt: (map['sukurimo_data'] as Timestamp).toDate(),
+      dueDate: (map['terminas'] as Timestamp).toDate(),
+      isActive: map['aktyvus'] as bool,
+      totalScore: (map['bendras_balas'] as num).toDouble(),
+      tasks: (map['tasks'] as List<dynamic>)
           .map((task) => HomeworkTask.fromMap(task as Map<String, dynamic>))
           .toList(),
-      submissions: (map['submissions'] as List)
-          .map((sub) => HomeworkSubmission.fromMap(sub as Map<String, dynamic>))
+      submissions: (map['submissions'] as List<dynamic>)
+          .map((submission) => HomeworkSubmission.fromMap(submission as Map<String, dynamic>))
           .toList(),
-      comments: (map['comments'] as List)
+      comments: (map['comments'] as List<dynamic>)
           .map((comment) => HomeworkComment.fromMap(comment as Map<String, dynamic>))
           .toList(),
     );

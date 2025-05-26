@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../Home/camera_page.dart';
-import '../Testai/test_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'Klases/class_page.dart';
 
@@ -128,38 +127,6 @@ class MenuScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 10),
-
-                        //mygtukas namų darbai
-                        SizedBox(
-                          width: buttonWidth,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => TestPage()),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFFA500),
-                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.only(
-                                    topRight: Radius.circular(10),
-                                    bottomRight: Radius.circular(10)
-                                ),
-                              ),
-                            ),
-                            child: const Text(
-                              'Namų darbai',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10), // Add spacing between buttons\
 
 
 

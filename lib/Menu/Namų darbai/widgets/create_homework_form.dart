@@ -393,9 +393,10 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
       final task = HomeworkTask(
-        taskId: widget.initialTask?.taskId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        id: widget.initialTask?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         title: _titleController.text,
         description: _descriptionController.text,
+        type: _taskType,
         maxScore: double.tryParse(_scoreController.text),
         photoRequired: _photoRequired,
         taskType: _taskType,

@@ -53,7 +53,7 @@ class ClassCard extends StatelessWidget {
           },
           itemBuilder: (context) => [
             if (isCreator) ...[
-              PopupMenuItem(
+              const PopupMenuItem(
                 value: 'regenerate',
                 child: Row(
                   children: [
@@ -63,7 +63,7 @@ class ClassCard extends StatelessWidget {
                   ],
                 ),
               ),
-              PopupMenuItem(
+              const PopupMenuItem(
                 value: 'manage',
                 child: Row(
                   children: [
@@ -73,7 +73,7 @@ class ClassCard extends StatelessWidget {
                   ],
                 ),
               ),
-              PopupMenuItem(
+              const PopupMenuItem(
                 value: 'delete',
                 child: Row(
                   children: [
@@ -84,7 +84,7 @@ class ClassCard extends StatelessWidget {
                 ),
               ),
             ] else
-              PopupMenuItem(
+              const PopupMenuItem(
                 value: 'leave',
                 child: Row(
                   children: [

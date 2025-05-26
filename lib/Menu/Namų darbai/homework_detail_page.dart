@@ -381,7 +381,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
                                   style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
                                 SizedBox(height: 8),
-                                Text(task.answer),
+                                Text(task.answer ?? ''),
                                 if (task.photoUrl != null) ...[
                                   SizedBox(height: 8),
                                   Image.network(

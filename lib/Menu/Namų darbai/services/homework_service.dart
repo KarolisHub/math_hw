@@ -20,59 +20,127 @@ class HomeworkService {
     final user = _auth.currentUser;
     if (user == null) throw Exception('Nepavyko nustatyti vartotojo');
 
-    final homeworkRef = _firestore.collection('homeworks').doc();
+    final homeworkRef = _firestore.collection('namu_darbai').doc();
     final totalScore = tasks.fold(0.0, (sum, task) => sum + (task.maxScore ?? 0.0));
 
-    final homework = Homework(
-      homeworkId: homeworkRef.id,
-      title: title,
-      description: description,
-      classId: classId,
-      creatorId: user.uid,
-      createdAt: DateTime.now(),
-      dueDate: dueDate,
-      isActive: true,
-      totalScore: totalScore,
-      tasks: tasks,
-      submissions: [],
-      comments: [],
-    );
+    // Create homework document
+    await homeworkRef.set({
+      'pavadinimas': title,
+      'aprasymas': description,
+      'klases_id': classId,
+      'kurejo_id': user.uid,
+      'sukurimo_data': Timestamp.fromDate(DateTime.now()),
+      'terminas': Timestamp.fromDate(dueDate),
+      'aktyvus': true,
+      'bendras_balas': totalScore,
+    });
 
-    await homeworkRef.set(homework.toMap());
+    // Create tasks in separate collection
+    for (var task in tasks) {
+      await _firestore.collection('namu_darbo_uzduotys').add({
+        ...task.toMap(),
+        'namu_darbo_id': homeworkRef.id,
+      });
+    }
+
     return homeworkRef.id;
   }
 
   // Get homework by ID
   Future<Homework> getHomework(String homeworkId) async {
-    final doc = await _firestore.collection('homeworks').doc(homeworkId).get();
-    if (!doc.exists) throw Exception('Namų darbas nerastas');
-    return Homework.fromMap(doc.id, doc.data()!);
+    final homeworkDoc = await _firestore.collection('namu_darbai').doc(homeworkId).get();
+    if (!homeworkDoc.exists) throw Exception('Namų darbas nerastas');
+
+    // Get tasks
+    final tasksSnapshot = await _firestore
+        .collection('namu_darbo_uzduotys')
+        .where('namu_darbo_id', isEqualTo: homeworkId)
+        .get();
+    final tasks = tasksSnapshot.docs
+        .map((doc) => HomeworkTask.fromMap(doc.data()))
+        .toList();
+
+    // Get submissions
+    final submissionsSnapshot = await _firestore
+        .collection('namu_darbo_pateikimai')
+        .where('namu_darbo_id', isEqualTo: homeworkId)
+        .get();
+    
+    final submissions = <HomeworkSubmission>[];
+    for (var submissionDoc in submissionsSnapshot.docs) {
+      final submissionData = submissionDoc.data();
+      
+      // Get task submissions for this submission
+      final taskSubmissionsSnapshot = await _firestore
+          .collection('uzduoties_atsakymai')
+          .where('pateikimo_id', isEqualTo: submissionDoc.id)
+          .get();
+      
+      final taskSubmissions = taskSubmissionsSnapshot.docs
+          .map((doc) => TaskSubmission.fromMap(doc.data()))
+          .toList();
+
+      submissions.add(HomeworkSubmission(
+        userId: submissionData['vartotojo_id'] as String,
+        submittedAt: (submissionData['pateikimo_data'] as Timestamp).toDate(),
+        status: submissionData['busena'] as String,
+        tasks: taskSubmissions,
+        totalScore: (submissionData['bendras_balas'] as num).toDouble(),
+      ));
+    }
+
+    // Get comments
+    final commentsSnapshot = await _firestore
+        .collection('namu_darbo_komentarai')
+        .where('namu_darbo_id', isEqualTo: homeworkId)
+        .get();
+    final comments = commentsSnapshot.docs
+        .map((doc) => HomeworkComment.fromMap(doc.data()))
+        .toList();
+
+    return Homework.fromMap(
+      homeworkId,
+      {
+        ...homeworkDoc.data()!,
+        'tasks': tasks.map((t) => t.toMap()).toList(),
+        'submissions': submissions.map((s) => s.toMap()).toList(),
+        'comments': comments.map((c) => c.toMap()).toList(),
+      },
+    );
   }
 
   // Get active homeworks for a class
   Stream<List<Homework>> getActiveHomeworksForClass(String classId) {
     return _firestore
-        .collection('homeworks')
-        .where('classId', isEqualTo: classId)
-        .where('isActive', isEqualTo: true)
-        .orderBy('dueDate')
+        .collection('namu_darbai')
+        .where('klases_id', isEqualTo: classId)
+        .where('aktyvus', isEqualTo: true)
+        .orderBy('terminas')
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Homework.fromMap(doc.id, doc.data()))
-            .toList());
+        .asyncMap((snapshot) async {
+          final homeworks = <Homework>[];
+          for (var doc in snapshot.docs) {
+            homeworks.add(await getHomework(doc.id));
+          }
+          return homeworks;
+        });
   }
 
   // Get archived homeworks for a class
   Stream<List<Homework>> getArchivedHomeworksForClass(String classId) {
     return _firestore
-        .collection('homeworks')
-        .where('classId', isEqualTo: classId)
-        .where('isActive', isEqualTo: false)
-        .orderBy('dueDate', descending: true)
+        .collection('namu_darbai')
+        .where('klases_id', isEqualTo: classId)
+        .where('aktyvus', isEqualTo: false)
+        .orderBy('terminas', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Homework.fromMap(doc.id, doc.data()))
-            .toList());
+        .asyncMap((snapshot) async {
+          final homeworks = <Homework>[];
+          for (var doc in snapshot.docs) {
+            homeworks.add(await getHomework(doc.id));
+          }
+          return homeworks;
+        });
   }
 
   // Submit homework
@@ -83,7 +151,6 @@ class HomeworkService {
     final user = _auth.currentUser;
     if (user == null) throw Exception('Nepavyko nustatyti vartotojo');
 
-    final homeworkRef = _firestore.collection('homeworks').doc(homeworkId);
     final homework = await getHomework(homeworkId);
 
     // Check if homework is active and not past due date
@@ -93,30 +160,38 @@ class HomeworkService {
     }
 
     // Check if user has already submitted
-    bool hasSubmitted = false;
-    try {
-      homework.submissions.firstWhere((sub) => sub.userId == user.uid);
-      hasSubmitted = true;
-    } catch (e) {
-      hasSubmitted = false;
-    }
+    final existingSubmission = await _firestore
+        .collection('namu_darbo_pateikimai')
+        .where('namu_darbo_id', isEqualTo: homeworkId)
+        .where('vartotojo_id', isEqualTo: user.uid)
+        .get();
 
-    if (hasSubmitted) {
+    if (existingSubmission.docs.isNotEmpty) {
       throw Exception('Jau esate pateikę šį namų darbą');
     }
 
-    final submission = HomeworkSubmission(
-      userId: user.uid,
-      submittedAt: DateTime.now(),
-      status: 'PATEIKTA',
-      tasks: taskSubmissions,
-      totalScore: 0.0, // Will be updated when graded
-    );
+    // Create submission document
+    final submissionRef = await _firestore.collection('namu_darbo_pateikimai').add({
+      'vartotojo_id': user.uid,
+      'namu_darbo_id': homeworkId,
+      'pateikimo_data': Timestamp.fromDate(DateTime.now()),
+      'busena': 'PATEIKTA',
+      'bendras_balas': 0.0,
+    });
 
-    // Add submission and move to "atlikti namu darbai" tab
-    await homeworkRef.update({
-      'submissions': FieldValue.arrayUnion([submission.toMap()]),
-      'isActive': false, // This will move it to "atlikti namu darbai" tab
+    // Create task submissions
+    for (var taskSubmission in taskSubmissions) {
+      await _firestore.collection('uzduoties_atsakymai').add({
+        ...taskSubmission.toMap(),
+        'pateikimo_id': submissionRef.id,
+        'namu_darbo_id': homeworkId,
+        'vartotojo_id': user.uid,
+      });
+    }
+
+    // Update homework status
+    await _firestore.collection('namu_darbai').doc(homeworkId).update({
+      'aktyvus': false,
     });
   }
 
@@ -131,59 +206,28 @@ class HomeworkService {
     }
 
     try {
-      // Log the attempt to upload
-      print('Attempting to upload photo for homework: $homeworkId, task: $taskId');
-      print('User ID: ${user.uid}');
-      print('Storage bucket: ${_storage.app.options.storageBucket}');
-
-      final path = 'homeworks/$homeworkId/tasks/$taskId/${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      print('Storage path: $path');
-      
+      final path = 'namu_darbai/$homeworkId/uzduotys/$taskId/${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final ref = _storage.ref().child(path);
-      print('Storage reference created');
-
+      
       // Create metadata with content type
       final metadata = SettableMetadata(
         contentType: 'image/jpeg',
         customMetadata: {
           'uploadedBy': user.uid,
           'uploadedAt': DateTime.now().toIso8601String(),
-          'homeworkId': homeworkId,
-          'taskId': taskId,
+          'namu_darbo_id': homeworkId,
+          'uzduoties_id': taskId,
         },
       );
-
-      print('Starting upload with metadata...');
       
       // Upload file with metadata
       final uploadTask = ref.putFile(photo, metadata);
-      
-      // Monitor upload state
-      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
-        print('Upload state: ${snapshot.state}');
-        print('Bytes transferred: ${snapshot.bytesTransferred}');
-        print('Total bytes: ${snapshot.totalBytes}');
-      });
-
-      // Wait for upload to complete
       final snapshot = await uploadTask;
-      print('Upload completed successfully');
       
       // Get download URL
       final downloadUrl = await snapshot.ref.getDownloadURL();
-      print('Download URL obtained: $downloadUrl');
-      
       return downloadUrl;
-    } catch (e, stackTrace) {
-      print('Error uploading photo: $e');
-      print('Stack trace: $stackTrace');
-      
-      if (e is FirebaseException) {
-        print('Firebase error code: ${e.code}');
-        print('Firebase error message: ${e.message}');
-        print('Firebase error plugin: ${e.plugin}');
-      }
-      
+    } catch (e) {
       throw Exception('Failed to upload photo: ${e.toString()}');
     }
   }
@@ -195,7 +239,6 @@ class HomeworkService {
     required List<TaskSubmission> gradedTasks,
     required double totalScore,
   }) async {
-    final homeworkRef = _firestore.collection('homeworks').doc(homeworkId);
     final homework = await getHomework(homeworkId);
 
     // Verify user is the creator
@@ -203,23 +246,39 @@ class HomeworkService {
       throw Exception('Tik klasės vartotojas gali vertinti namų darbą');
     }
 
-    // Find and update the submission
-    final submissions = homework.submissions;
-    final submissionIndex = submissions.indexWhere((sub) => sub.userId == userId);
-    if (submissionIndex == -1) throw Exception('Pateikimas nerastas');
+    // Find the submission
+    final submissionQuery = await _firestore
+        .collection('namu_darbo_pateikimai')
+        .where('namu_darbo_id', isEqualTo: homeworkId)
+        .where('vartotojo_id', isEqualTo: userId)
+        .get();
 
-    final updatedSubmission = HomeworkSubmission(
-      userId: userId,
-      submittedAt: submissions[submissionIndex].submittedAt,
-      status: 'GRADED',
-      tasks: gradedTasks,
-      totalScore: totalScore,
-    );
+    if (submissionQuery.docs.isEmpty) {
+      throw Exception('Pateikimas nerastas');
+    }
 
-    submissions[submissionIndex] = updatedSubmission;
+    final submissionDoc = submissionQuery.docs.first;
 
-    await homeworkRef.update({
-      'submissions': submissions.map((sub) => sub.toMap()).toList()
+    // Update task submissions
+    for (var task in gradedTasks) {
+      final taskSubmissionQuery = await _firestore
+          .collection('uzduoties_atsakymai')
+          .where('pateikimo_id', isEqualTo: submissionDoc.id)
+          .where('uzduoties_id', isEqualTo: task.taskId)
+          .get();
+
+      if (taskSubmissionQuery.docs.isNotEmpty) {
+        await taskSubmissionQuery.docs.first.reference.update({
+          'balas': task.score,
+          'atsiliepimas': task.feedback,
+        });
+      }
+    }
+
+    // Update submission status and total score
+    await submissionDoc.reference.update({
+      'busena': 'IVERTINTA',
+      'bendras_balas': totalScore,
     });
   }
 
@@ -232,7 +291,6 @@ class HomeworkService {
     final user = _auth.currentUser;
     if (user == null) throw Exception('Nepavyko nustatyti vartotojo');
 
-    final homeworkRef = _firestore.collection('homeworks').doc(homeworkId);
     final homework = await getHomework(homeworkId);
 
     // Verify user is either the creator or a class member
@@ -248,8 +306,9 @@ class HomeworkService {
       isPinned: isPinned,
     );
 
-    await homeworkRef.update({
-      'comments': FieldValue.arrayUnion([comment.toMap()])
+    await _firestore.collection('namu_darbo_komentarai').add({
+      ...comment.toMap(),
+      'namu_darbo_id': homeworkId,
     });
   }
 
@@ -258,7 +317,6 @@ class HomeworkService {
     required String homeworkId,
     required DateTime newDueDate,
   }) async {
-    final homeworkRef = _firestore.collection('homeworks').doc(homeworkId);
     final homework = await getHomework(homeworkId);
 
     // Verify user is the creator
@@ -266,15 +324,14 @@ class HomeworkService {
       throw Exception('Tik namų darbo kūrėjas gali atnaujinti laiką');
     }
 
-    await homeworkRef.update({
-      'dueDate': Timestamp.fromDate(newDueDate),
-      'isActive': true, // Reactivate homework when deadline is updated
+    await _firestore.collection('namu_darbai').doc(homeworkId).update({
+      'terminas': Timestamp.fromDate(newDueDate),
+      'aktyvus': true,
     });
   }
 
   // Archive homework
   Future<void> archiveHomework(String homeworkId) async {
-    final homeworkRef = _firestore.collection('homeworks').doc(homeworkId);
     final homework = await getHomework(homeworkId);
 
     // Verify user is the creator
@@ -282,12 +339,13 @@ class HomeworkService {
       throw Exception('Tik namų darbo kūrėjas gali archyvuoti namų darbą');
     }
 
-    await homeworkRef.update({'isActive': false});
+    await _firestore.collection('namu_darbai').doc(homeworkId).update({
+      'aktyvus': false,
+    });
   }
 
   // Delete homework
   Future<void> deleteHomework(String homeworkId) async {
-    final homeworkRef = _firestore.collection('homeworks').doc(homeworkId);
     final homework = await getHomework(homeworkId);
 
     // Verify user is the creator
@@ -303,14 +361,56 @@ class HomeworkService {
             final photoRef = _storage.refFromURL(task.photoUrl!);
             await photoRef.delete();
           } catch (e) {
-            // Log error but continue with deletion
             print('Nepavyko ištrinti nuotraukos: $e. Bandykite vėliau');
           }
         }
       }
     }
 
+    // Delete all related documents
+    final batch = _firestore.batch();
+
+    // Delete tasks
+    final tasksSnapshot = await _firestore
+        .collection('namu_darbo_uzduotys')
+        .where('namu_darbo_id', isEqualTo: homeworkId)
+        .get();
+    for (var doc in tasksSnapshot.docs) {
+      batch.delete(doc.reference);
+    }
+
+    // Delete submissions and their task submissions
+    final submissionsSnapshot = await _firestore
+        .collection('namu_darbo_pateikimai')
+        .where('namu_darbo_id', isEqualTo: homeworkId)
+        .get();
+    
+    for (var submissionDoc in submissionsSnapshot.docs) {
+      // Delete task submissions
+      final taskSubmissionsSnapshot = await _firestore
+          .collection('uzduoties_atsakymai')
+          .where('pateikimo_id', isEqualTo: submissionDoc.id)
+          .get();
+      for (var doc in taskSubmissionsSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      
+      // Delete submission
+      batch.delete(submissionDoc.reference);
+    }
+
+    // Delete comments
+    final commentsSnapshot = await _firestore
+        .collection('namu_darbo_komentarai')
+        .where('namu_darbo_id', isEqualTo: homeworkId)
+        .get();
+    for (var doc in commentsSnapshot.docs) {
+      batch.delete(doc.reference);
+    }
+
     // Delete the homework document
-    await homeworkRef.delete();
+    batch.delete(_firestore.collection('namu_darbai').doc(homeworkId));
+
+    await batch.commit();
   }
 } 

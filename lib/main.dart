@@ -1,29 +1,32 @@
 import 'package:flutter/material.dart';
-import 'package:math_hw/login/auth_page.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:math_hw/login/auth_page.dart';
+import 'package:math_hw/services/firebase_service.dart';
 import 'firebase_options.dart';
-import 'package:firebase_app_check/firebase_app_check.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
-    // Initialize Firebase
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    // Initialize Firebase only if it hasn't been initialized yet
+    if (Firebase.apps.isEmpty) {
+      print('Initializing Firebase core...');
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      print('Firebase core initialized successfully');
+    } else {
+      print('Firebase core already initialized, using existing instance');
+    }
     
-    // Initialize App Check
-    await FirebaseAppCheck.instance.activate(
-      androidProvider: AndroidProvider.debug,
-      appleProvider: AppleProvider.debug,
-    );
-
-    // Initialize Google Sign In
-    await GoogleSignIn().signOut();
-  } catch (e) {
-    print('Error initializing services: $e');
+    // Initialize additional services
+    print('Initializing additional Firebase services...');
+    await FirebaseService.initialize();
+    print('All services initialized successfully');
+  } catch (e, stackTrace) {
+    print('Error during initialization: $e');
+    print('Stack trace: $stackTrace');
+    // Continue running the app even if initialization fails
   }
   
   runApp(const MyApp());

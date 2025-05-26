@@ -13,7 +13,7 @@ class CameraOCR extends StatefulWidget {
 class _CameraOCRState extends State<CameraOCR> {
   final _mathpixScanner = MathpixScanner();
   File? _image;
-  String _latexResult = 'No result yet';
+  String _latexResult = 'Laukiamas rezultatas';
   CameraController? _cameraController;
   bool _isCameraInitialized = false;
 
@@ -65,7 +65,7 @@ class _CameraOCRState extends State<CameraOCR> {
   Future<void> _resetCamera() async {
     setState(() {
       _image = null;
-      _latexResult = 'No result yet';
+      _latexResult = 'Laukiamas rezultatas';
     });
   }
 
@@ -105,7 +105,7 @@ class _CameraOCRState extends State<CameraOCR> {
             ),
 
           // LaTeX result overlay
-          if (_latexResult != 'No result yet')
+          if (_latexResult != 'Palaukite rezultatų')
             Positioned(
               bottom: 100,
               left: 0,
@@ -149,9 +149,9 @@ class _CameraOCRState extends State<CameraOCR> {
                     iconSize: 50,
                   ),
 
-                  const SizedBox(width: 35), // Left spacing to balance the right button
+                  const SizedBox(width: 35),
                   
-                  //Fotografavimo mygtukas
+                  //Image taking button
                   Center(
                     child: IconButton(
                       onPressed: _processImage,
@@ -163,7 +163,7 @@ class _CameraOCRState extends State<CameraOCR> {
                     ),
                   ),
                   
-                  //Nuotraukos pakartojimo mygtukas
+                  //Image reset button
                   IconButton(
                     onPressed: _resetCamera,
                     icon: const Icon(

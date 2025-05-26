@@ -26,17 +26,17 @@ class _ClassMembersPageState extends State<ClassMembersPage> {
     bool confirm = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Pašalinti vartotoją'),
+        title: const Text('Pašalinti vartotoją'),
         content: Text('Ar tikrai norite pašalinti vartotoją $userName iš klasės?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Atšaukti'),
+            child: const Text('Atšaukti'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text('Pašalinti'),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Pašalinti'),
           ),
         ],
       ),
@@ -47,7 +47,7 @@ class _ClassMembersPageState extends State<ClassMembersPage> {
     try {
       await _classService.removeMember(widget.classId, userId);
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Vartotojas pašalintas sėkmingai'))
+          const SnackBar(content: Text('Vartotojas pašalintas sėkmingai'))
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -87,12 +87,12 @@ class _ClassMembersPageState extends State<ClassMembersPage> {
 
           Map<String, String> roles = {};
           for (var doc in memberSnapshot.data!.docs) {
-            roles[doc['user_id'] as String] = doc['role'] as String;
+            roles[doc['user_id'] as String] = doc['vartotojo_tipas'] as String;
           }
 
           return StreamBuilder<QuerySnapshot>(
             stream: _firestore
-                .collection('users')
+                .collection('vartotojai')
                 .where(FieldPath.documentId, whereIn: userIds)
                 .snapshots(),
             builder: (context, userSnapshot) {
@@ -118,9 +118,9 @@ class _ClassMembersPageState extends State<ClassMembersPage> {
                 itemBuilder: (context, index) {
                   DocumentSnapshot memberDoc = memberSnapshot.data!.docs[index];
                   String userId = memberDoc['user_id'];
-                  String role = memberDoc['role'];
+                  String role = memberDoc['vartotojo_tipas'];
                   String name = userInfo[userId]?['name'] as String? ?? 'Unknown User';
-                  bool isCreator = role == 'creator';
+                  bool isCreator = role == 'klases_kurejas';
                   bool isSelf = userId == currentUser.uid;
 
                   return ListTile(

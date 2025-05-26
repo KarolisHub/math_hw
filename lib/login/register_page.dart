@@ -22,6 +22,29 @@ class _RegisterPageState extends State<RegisterPage> {
   final surnameController = TextEditingController();
   bool isLoading = false;
 
+  String getFirebaseAuthErrorMessage(String? code) {
+    switch (code) {
+      case 'invalid-email':
+        return 'Neteisingas el. pašto formatas.';
+      case 'user-disabled':
+        return 'Ši paskyra yra išjungta.';
+      case 'user-not-found':
+        return 'Vartotojas nerastas. Bandykite prisijungti iš naujo.';
+      case 'wrong-password':
+        return 'Neteisingas el. paštas arba slaptažodis.';
+      case 'email-already-in-use':
+        return 'Šis el. paštas jau naudojamas.';
+      case 'weak-password':
+        return 'Slaptažodis per silpnas.';
+      case 'too-many-requests':
+        return 'Per daug bandymų. Bandykite vėliau.';
+      case 'network-request-failed':
+        return 'Patikrinkite interneto ryšį.';
+      default:
+        return 'Įvyko klaida. Bandykite dar kartą.';
+    }
+  }
+
   //sign user up method
   void signUserUp() async {
     if (!mounted) return;
@@ -62,7 +85,7 @@ class _RegisterPageState extends State<RegisterPage> {
     });
 
     try {
-      await _authService.registerWithEmailAndPassword(
+      final userCredential = await _authService.registerWithEmailAndPassword(
         emailController.text.trim(),
         passwordController.text,
         nameController.text.trim(),
@@ -70,6 +93,9 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       if (!mounted) return;
+
+      // If we get here, registration was successful
+      print('Registration successful for user: ${userCredential.user?.uid}');
       
       // Clear the text controllers
       emailController.clear();
@@ -78,12 +104,25 @@ class _RegisterPageState extends State<RegisterPage> {
       nameController.clear();
       surnameController.clear();
       
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Registracija sėkminga!'),
+          content: const Text('Patikrinkite el. paštą ir patvirtinkite paskyrą.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Gerai'),
+            ),
+          ],
+        ),
+      );
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      showErrorMessage(e.message ?? 'Įvyko klaida. Bandykite dar kartą.');
+      showErrorMessage(getFirebaseAuthErrorMessage(e.code));
     } catch (e) {
       if (!mounted) return;
-      showErrorMessage("Įvyko klaida. Bandykite dar kartą.");
+      showErrorMessage(getFirebaseAuthErrorMessage(null));
     } finally {
       if (mounted) {
         setState(() {
@@ -148,7 +187,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const SizedBox(height: 30),
-                        //vardas ir pavardė vienoje eilutėje
+                        //name and surname
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 40.0),
                           child: Row(
@@ -176,7 +215,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                         const SizedBox(height: 20),
 
-                        //el. paštas
+                        //email
                         LoginTextField(
                           controller: emailController,
                           hintText: 'El. paštas',
@@ -185,7 +224,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                         const SizedBox(height: 20),
 
-                        //slaptažodis
+                        //password
                         LoginTextField(
                           controller: passwordController,
                           hintText: 'Slaptažodis',
@@ -194,7 +233,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                         const SizedBox(height: 20),
 
-                        //pakartoti slaptažodį
+                        //repeat password
                         LoginTextField(
                           controller: confirmPasswordController,
                           hintText: 'Pakartoti slaptažodį',
@@ -203,27 +242,27 @@ class _RegisterPageState extends State<RegisterPage> {
 
                         const SizedBox(height: 20),
 
-                        //prisijungti mygtukas
+                        //log in button
                         LoginButton(
-                          onTap: signUserUp,
-                          text: 'Registruotis',
+                          onTap: isLoading ? null : signUserUp,
+                          text: isLoading ? 'Kraunama...' : 'Registruotis',
                         ),
 
                         const SizedBox(height: 30),
 
-                        //arba
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 25.0),
+                        //"arba" button
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 25.0),
                           child: Row(
                             children: [
-                              const Expanded(
+                              Expanded(
                                 child: Divider(
                                   thickness: 1.2,
                                   color: Color(0xFFFFA500),
                                 ),
                               ),
 
-                              const Padding(
+                              Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 25.0),
                                 child: Text(
                                   "arba",
@@ -231,7 +270,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                               ),
 
-                              const Expanded(
+                              Expanded(
                                 child: Divider(
                                   thickness: 1.2,
                                   color: Color(0xFFFFA500),
@@ -242,7 +281,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         const SizedBox(height: 30),
 
-                        //google prisijungimas
+                        //google log in
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -254,7 +293,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         const SizedBox(height: 60),
 
-                        //naujas vartotojas? registruotis
+                        //already have an account? login
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

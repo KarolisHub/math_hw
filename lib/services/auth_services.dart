@@ -83,70 +83,130 @@ class AuthService {
         );
       }
 
+      print('Creating user with email: $email');
+      
+      // First create the user
       final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
+      if (userCredential.user == null) {
+        throw FirebaseAuthException(
+          code: 'user-creation-failed',
+          message: 'Nepavyko sukurti vartotojo',
+        );
+      }
+
+      print('User created successfully with UID: ${userCredential.user?.uid}');
+
+      // Then update the user profile
+      try {
+        await userCredential.user?.updateDisplayName('$name $surname');
+        print('User profile updated successfully');
+      } catch (e) {
+        print('Error updating user profile: $e');
+        // Continue even if profile update fails
+      }
+
       // Store user data in Firestore
-      if (userCredential.user != null) {
-        await _firestore.collection('users').doc(userCredential.user!.uid).set({
-          'name': name.trim(),
-          'surname': surname.trim(),
-          'email': email,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+      try {
+        print('Attempting to create user document in Firestore');
+        final userData = {
+          'vardas': name.trim(),
+          'pavarde': surname.trim(),
+          'el_pastas': email,
+          'role': 'mokinys',
+          'sukurimo_data': FieldValue.serverTimestamp(),
+          'paskutinio_prisijungimo_data': FieldValue.serverTimestamp(),
+          'aktyvus': true,
+        };
+        
+        await _firestore
+            .collection('vartotojai')
+            .doc(userCredential.user!.uid)
+            .set(userData);
+            
+        print('User document created successfully in Firestore');
+      } catch (e) {
+        print('Error creating user document in Firestore: $e');
+        // If Firestore fails, we should still return the user credential
+        // as the user is already created in Firebase Auth
       }
 
       return userCredential;
     } on FirebaseAuthException catch (e) {
+      print('Firebase Auth Exception: ${e.code} - ${e.message}');
       throw FirebaseAuthException(
         code: e.code,
         message: getErrorMessage(e.code),
       );
+    } catch (e, stackTrace) {
+      print('Unexpected error during registration: $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
     }
   }
 
   // Sign in with Google
   Future<UserCredential> signInWithGoogle() async {
     try {
+      print('Starting Google Sign In process');
       final GoogleSignInAccount? gUser = await GoogleSignIn().signIn();
       if (gUser == null) {
+        print('Google Sign In was cancelled by user');
         throw FirebaseAuthException(
           code: 'google-sign-in-cancelled',
           message: 'Google prisijungimas atšauktas',
         );
       }
 
+      print('Getting Google authentication');
       final GoogleSignInAuthentication gAuth = await gUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: gAuth.accessToken,
         idToken: gAuth.idToken,
       );
 
+      print('Signing in with Google credential');
       final userCredential = await _auth.signInWithCredential(credential);
+      print('Successfully signed in with Google. UID: ${userCredential.user?.uid}');
 
       // Store user data in Firestore
       if (userCredential.user != null) {
-        final displayName = userCredential.user!.displayName ?? 'Nežinomas vartotojas';
-        final nameParts = displayName.split(' ');
-        final name = nameParts.isNotEmpty ? nameParts.first : 'Nežinomas';
-        final surname = nameParts.length > 1 ? nameParts.last : 'Vartotojas';
+        try {
+          print('Attempting to create/update user document in Firestore');
+          final displayName = userCredential.user!.displayName ?? 'Nežinomas vartotojas';
+          final nameParts = displayName.split(' ');
+          final name = nameParts.isNotEmpty ? nameParts.first : 'Nežinomas';
+          final surname = nameParts.length > 1 ? nameParts.last : 'Vartotojas';
 
-        await _firestore.collection('users').doc(userCredential.user!.uid).set({
-          'name': name,
-          'surname': surname,
-          'email': userCredential.user!.email,
-          'createdAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+          await _firestore.collection('vartotojai').doc(userCredential.user!.uid).set({
+            'vardas': name,
+            'pavarde': surname,
+            'el_pastas': userCredential.user!.email,
+            'role': 'mokinys',
+            'sukurimo_data': FieldValue.serverTimestamp(),
+            'paskutinio_prisijungimo_data': FieldValue.serverTimestamp(),
+            'aktyvus': true,
+          }, SetOptions(merge: true));
+          print('User document created/updated successfully in Firestore');
+        } catch (e) {
+          print('Error creating/updating user document in Firestore: $e');
+          rethrow;
+        }
       }
 
       return userCredential;
     } on FirebaseAuthException catch (e) {
+      print('Firebase Auth Exception during Google Sign In: ${e.code} - ${e.message}');
       throw FirebaseAuthException(
         code: e.code,
         message: getErrorMessage(e.code),
       );
+    } catch (e) {
+      print('Unexpected error during Google Sign In: $e');
+      rethrow;
     }
   }
 

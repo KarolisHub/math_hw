@@ -159,17 +159,17 @@ class _ClassPageState extends State<ClassPage> with SingleTickerProviderStateMix
               }
 
               List<String> classIds = memberSnapshot.data!.docs
-                  .map((doc) => doc['class_id'] as String)
+                  .map((doc) => doc['klases_id'] as String)
                   .toList();
 
               Map<String, String> roles = {};
               for (var doc in memberSnapshot.data!.docs) {
-                roles[doc['class_id'] as String] = doc['role'] as String;
+                roles[doc['klases_id'] as String] = doc['vartotojo_tipas'] as String;
               }
 
               return StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
-                    .collection('classes')
+                    .collection('klases')
                     .where(FieldPath.documentId, whereIn: classIds)
                     .snapshots(),
                 builder: (context, classSnapshot) {
@@ -191,13 +191,13 @@ class _ClassPageState extends State<ClassPage> with SingleTickerProviderStateMix
                       DocumentSnapshot classDoc = classSnapshot.data!.docs[index];
                       Map<String, dynamic> classData = classDoc.data() as Map<String, dynamic>;
                       String classId = classDoc.id;
-                      String role = roles[classId] ?? 'member';
-                      bool isCreator = role == 'creator';
+                      String role = roles[classId] ?? 'klases_dalyvis';
+                      bool isCreator = role == 'klases_kurejas';
 
                       return ClassCard(
                         classId: classId,
-                        className: classData['name'],
-                        joinCode: classData['join_code'],
+                        className: classData['pavadinimas'],
+                        joinCode: classData['prisijungimo_kodas'],
                         isCreator: isCreator,
                         onRegenerateCode: () => _regenerateClassCode(classId),
                         onManageMembers: () {
@@ -206,20 +206,20 @@ class _ClassPageState extends State<ClassPage> with SingleTickerProviderStateMix
                             MaterialPageRoute(
                               builder: (context) => ClassMembersPage(
                                 classId: classId,
-                                className: classData['name'],
+                                className: classData['pavadinimas'],
                               ),
                             ),
                           );
                         },
-                        onDeleteClass: () => _deleteClass(classId, classData['name']),
-                        onLeaveClass: () => _leaveClass(classId, classData['name']),
+                        onDeleteClass: () => _deleteClass(classId, classData['pavadinimas']),
+                        onLeaveClass: () => _leaveClass(classId, classData['pavadinimas']),
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => HomeworkPage(
                                 classId: classId,
-                                className: classData['name'],
+                                className: classData['pavadinimas'],
                                 isCreator: isCreator,
                               ),
                             ),

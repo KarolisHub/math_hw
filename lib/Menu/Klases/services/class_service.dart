@@ -14,9 +14,9 @@ class ClassService {
       String code = (_random.nextInt(900000) + 100000).toString();
 
       QuerySnapshot query = await _firestore
-          .collection('classes')
-          .where('join_code', isEqualTo: code)
-          .where('is_active', isEqualTo: true)
+          .collection('klases')
+          .where('prisijungimo_kodas', isEqualTo: code)
+          .where('aktyvumas', isEqualTo: true)
           .get();
 
       if (query.docs.isEmpty) {
@@ -35,22 +35,22 @@ class ClassService {
     String joinCode = await generateUniqueClassCode();
     DateTime expiryDate = DateTime.now().add(Duration(days: 7));
 
-    DocumentReference classRef = await _firestore.collection('classes').add({
-      'name': className.trim(),
-      'creator_id': currentUser.uid,
-      'join_code': joinCode,
-      'code_expiry_date': Timestamp.fromDate(expiryDate),
-      'created_at': Timestamp.now(),
-      'is_active': true,
-      'max_members': 100,
-      'current_member_count': 1,
+    DocumentReference classRef = await _firestore.collection('klases').add({
+      'pavadinimas': className.trim(),
+      'kurejo_id': currentUser.uid,
+      'prisijungimo_kodas': joinCode,
+      'kodo_galiojimo_data': Timestamp.fromDate(expiryDate),
+      'sukurimo_data': Timestamp.now(),
+      'aktyvumas': true,
+      'maksimalus_nariu_skaicius': 100,
+      'dabartinis_nariu_skaicius': 1,
     });
 
-    await _firestore.collection('class_members').add({
-      'user_id': currentUser.uid,
-      'class_id': classRef.id,
-      'role': 'creator',
-      'joined_at': Timestamp.now(),
+    await _firestore.collection('klases_nariai').add({
+      'klases_id': classRef.id,
+      'vartotojo_id': currentUser.uid,
+      'vartotojo_tipas': 'klases_kurejas',
+      'prisijungta': Timestamp.now(),
     });
 
     return joinCode;
@@ -63,10 +63,10 @@ class ClassService {
       throw Exception("Vartotojas neprisijungęs");
     }
 
-    QuerySnapshot query = await _firestore.collection('classes')
-        .where('join_code', isEqualTo: code)
-        .where('is_active', isEqualTo: true)
-        .where('code_expiry_date', isGreaterThan: Timestamp.now())
+    QuerySnapshot query = await _firestore.collection('klases')
+        .where('prisijungimo_kodas', isEqualTo: code)
+        .where('aktyvumas', isEqualTo: true)
+        .where('kodo_galiojimo_data', isGreaterThan: Timestamp.now())
         .get();
 
     if (query.docs.isEmpty) {
@@ -76,32 +76,32 @@ class ClassService {
     DocumentSnapshot classDoc = query.docs.first;
     Map<String, dynamic> classData = classDoc.data() as Map<String, dynamic>;
 
-    if (classData['current_member_count'] >= classData['max_members']) {
+    if (classData['dabartinis_nariu_skaicius'] >= classData['maksimalus_nariu_skaicius']) {
       throw Exception("Klasė yra pilna");
     }
 
     QuerySnapshot memberQuery = await _firestore
-        .collection('class_members')
-        .where('class_id', isEqualTo: classDoc.id)
-        .where('user_id', isEqualTo: currentUser.uid)
+        .collection('klases_nariai')
+        .where('klases_id', isEqualTo: classDoc.id)
+        .where('vartotojo_id', isEqualTo: currentUser.uid)
         .get();
 
     if (memberQuery.docs.isNotEmpty) {
       throw Exception("Tu jau esi šios klasės dalyvis");
     }
 
-    await _firestore.collection('class_members').add({
-      'user_id': currentUser.uid,
-      'class_id': classDoc.id,
-      'role': 'member',
-      'joined_at': Timestamp.now(),
+    await _firestore.collection('klases_nariai').add({
+      'klases_id': classDoc.id,
+      'vartotojo_id': currentUser.uid,
+      'vartotojo_tipas': 'klases_dalyvis',
+      'prisijungta': Timestamp.now(),
     });
 
-    await _firestore.collection('classes').doc(classDoc.id).update({
-      'current_member_count': FieldValue.increment(1)
+    await _firestore.collection('klases').doc(classDoc.id).update({
+      'dabartinis_nariu_skaicius': FieldValue.increment(1)
     });
 
-    return classData['name'];
+    return classData['pavadinimas'];
   }
 
   // Regenerate class code
@@ -111,19 +111,19 @@ class ClassService {
       throw Exception("Vartotojas neprisijungęs");
     }
 
-    DocumentSnapshot classDoc = await _firestore.collection('classes').doc(classId).get();
+    DocumentSnapshot classDoc = await _firestore.collection('klases').doc(classId).get();
     Map<String, dynamic> classData = classDoc.data() as Map<String, dynamic>;
 
-    if (classData['creator_id'] != currentUser.uid) {
+    if (classData['kurejo_id'] != currentUser.uid) {
       throw Exception('Tik klasės kūrėjas gali atnaujinti kodą');
     }
 
     String newCode = await generateUniqueClassCode();
     DateTime newExpiryDate = DateTime.now().add(Duration(days: 7));
 
-    await _firestore.collection('classes').doc(classId).update({
-      'join_code': newCode,
-      'code_expiry_date': Timestamp.fromDate(newExpiryDate),
+    await _firestore.collection('klases').doc(classId).update({
+      'prisijungimo_kodas': newCode,
+      'kodo_galiojimo_data': Timestamp.fromDate(newExpiryDate),
     });
 
     return newCode;
@@ -137,26 +137,26 @@ class ClassService {
     }
 
     QuerySnapshot memberQuery = await _firestore
-        .collection('class_members')
-        .where('class_id', isEqualTo: classId)
-        .where('user_id', isEqualTo: currentUser.uid)
+        .collection('klases_nariai')
+        .where('klases_id', isEqualTo: classId)
+        .where('vartotojo_id', isEqualTo: currentUser.uid)
         .get();
 
     if (memberQuery.docs.isEmpty) {
       throw Exception("Jūs neesate šios klasės dalyvis");
     }
 
-    String role = memberQuery.docs.first.get('role');
-    if (role == 'creator') {
+    String role = memberQuery.docs.first.get('vartotojo_tipas');
+    if (role == 'klases_kurejas') {
       throw Exception("Negalite palikti šios klasės, nes esate jos kūrėjas");
     }
 
-    await _firestore.collection('class_members')
+    await _firestore.collection('klases_nariai')
         .doc(memberQuery.docs.first.id)
         .delete();
 
-    await _firestore.collection('classes').doc(classId).update({
-      'current_member_count': FieldValue.increment(-1)
+    await _firestore.collection('klases').doc(classId).update({
+      'dabartinis_nariu_skaicius': FieldValue.increment(-1)
     });
   }
 
@@ -167,29 +167,29 @@ class ClassService {
       throw Exception("Vartotojas neprisijungęs");
     }
 
-    DocumentSnapshot classDoc = await _firestore.collection('classes').doc(classId).get();
+    DocumentSnapshot classDoc = await _firestore.collection('klases').doc(classId).get();
     Map<String, dynamic> classData = classDoc.data() as Map<String, dynamic>;
 
-    if (classData['creator_id'] != currentUser.uid) {
+    if (classData['kurejo_id'] != currentUser.uid) {
       throw Exception('Tik klasės kūrėjas gali pašalinti dalyvį');
     }
 
     QuerySnapshot memberQuery = await _firestore
-        .collection('class_members')
-        .where('class_id', isEqualTo: classId)
-        .where('user_id', isEqualTo: userId)
+        .collection('klases_nariai')
+        .where('klases_id', isEqualTo: classId)
+        .where('vartotojo_id', isEqualTo: userId)
         .get();
 
     if (memberQuery.docs.isEmpty) {
       throw Exception("Jūs neesate šios klasės dalyvis");
     }
 
-    await _firestore.collection('class_members')
+    await _firestore.collection('klases_nariai')
         .doc(memberQuery.docs.first.id)
         .delete();
 
-    await _firestore.collection('classes').doc(classId).update({
-      'current_member_count': FieldValue.increment(-1)
+    await _firestore.collection('klases').doc(classId).update({
+      'dabartinis_nariu_skaicius': FieldValue.increment(-1)
     });
   }
 
@@ -201,16 +201,16 @@ class ClassService {
     }
 
     return _firestore
-        .collection('class_members')
-        .where('user_id', isEqualTo: currentUser.uid)
+        .collection('klases_nariai')
+        .where('vartotojo_id', isEqualTo: currentUser.uid)
         .snapshots();
   }
 
   // Get class members stream
   Stream<QuerySnapshot> getClassMembersStream(String classId) {
     return _firestore
-        .collection('class_members')
-        .where('class_id', isEqualTo: classId)
+        .collection('klases_nariai')
+        .where('klases_id', isEqualTo: classId)
         .snapshots();
   }
 
@@ -222,20 +222,20 @@ class ClassService {
     }
 
     // Get class document to verify creator
-    DocumentSnapshot classDoc = await _firestore.collection('classes').doc(classId).get();
+    DocumentSnapshot classDoc = await _firestore.collection('klases').doc(classId).get();
     if (!classDoc.exists) {
       throw Exception("Klasė nerasta");
     }
 
     Map<String, dynamic> classData = classDoc.data() as Map<String, dynamic>;
-    if (classData['creator_id'] != currentUser.uid) {
+    if (classData['kurejo_id'] != currentUser.uid) {
       throw Exception("Tik klasės kūrėjas gali ištrinti klasę");
     }
 
     // Delete all class members
     QuerySnapshot memberQuery = await _firestore
-        .collection('class_members')
-        .where('class_id', isEqualTo: classId)
+        .collection('klases_nariai')
+        .where('klases_id', isEqualTo: classId)
         .get();
 
     // Delete each member document

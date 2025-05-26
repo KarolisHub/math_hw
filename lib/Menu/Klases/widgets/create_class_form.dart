@@ -61,19 +61,19 @@ class _CreateClassFormState extends State<CreateClassForm> {
               'Sukurti naują klasę',
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             TextField(
               controller: _classNameController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Klasės pavadinimas',
                 border: OutlineInputBorder(),
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _isLoading ? null : _createClass,
               style: ElevatedButton.styleFrom(
-                minimumSize: Size(double.infinity, 50),
+                minimumSize: const Size(double.infinity, 50),
               ),
               child: _isLoading
                   ? const SizedBox(
@@ -81,7 +81,7 @@ class _CreateClassFormState extends State<CreateClassForm> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text('Sukurti klasę'),
+                  : const Text('Sukurti klasę'),
             ),
           ],
         ),
