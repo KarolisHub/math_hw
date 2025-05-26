@@ -12,16 +12,12 @@
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+# IDE specific files
+.idea/
+.vscode/
 *.iml
 *.ipr
 *.iws
-.idea/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -32,6 +28,37 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+lib/firebase_options.dart
+lib/services/send_to_mathpix_scanner.dart
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+
+# Local configuration
+local.properties
+key.properties
+google-services.json
+GoogleService-Info.plist
+
+# Build outputs
+**/build/
+**/dist/
+**/out/
+
+# Debug files
+*.tlog
+*.pdb
+
+# Coverage reports
+coverage/
+*.lcov
 
 # Symbolication related
 app.*.symbols
@@ -43,3 +70,4 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/app/google-services.json
