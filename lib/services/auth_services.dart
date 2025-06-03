@@ -23,7 +23,7 @@ class AuthService {
   String getErrorMessage(String code) {
     switch (code) {
       case 'user-not-found':
-        return 'Vartotojas su tokiu el. paštu nerastas';
+        return 'Tokio vartotojo nėra';
       case 'wrong-password':
         return 'Neteisingas slaptažodis';
       case 'email-already-in-use':
@@ -33,7 +33,13 @@ class AuthService {
       case 'invalid-email':
         return 'Neteisingas el. pašto formatas';
       case 'network-request-failed':
-        return 'Nepavyko prisijungti prie tinklo';
+        return 'Patikrinkite interneto ryšį ir bandykite dar kartą.';
+      case 'invalid-credential':
+        return 'Netesingas el. paštas arba slaptažodis';
+      case 'too-many-requests':
+        return 'Per daug bandymų. Bandykite dar kartą vėliau';
+      case 'user-disabled':
+        return 'Šis paskyra yra išjungta';
       default:
         return 'Įvyko klaida. Bandykite dar kartą';
     }
@@ -54,10 +60,14 @@ class AuthService {
         password: password,
       );
     } on FirebaseAuthException catch (e) {
+      print('AuthService - FirebaseAuthException: ${e.code} - ${e.message}');
       throw FirebaseAuthException(
         code: e.code,
         message: getErrorMessage(e.code),
       );
+    } catch (e) {
+      print('AuthService - Unexpected error: $e');
+      rethrow;
     }
   }
 
@@ -120,6 +130,7 @@ class AuthService {
           'sukurimo_data': FieldValue.serverTimestamp(),
           'paskutinio_prisijungimo_data': FieldValue.serverTimestamp(),
           'aktyvus': true,
+          'klases': <String>[],
         };
         
         await _firestore
@@ -189,6 +200,7 @@ class AuthService {
             'sukurimo_data': FieldValue.serverTimestamp(),
             'paskutinio_prisijungimo_data': FieldValue.serverTimestamp(),
             'aktyvus': true,
+            'klases': [],
           }, SetOptions(merge: true));
           print('User document created/updated successfully in Firestore');
         } catch (e) {

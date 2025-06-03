@@ -11,6 +11,7 @@ class HomeworkTask {
   final bool photoRequired;
   final String taskType;
   final String? latexContent;
+  final int? taskOrder;
 
   HomeworkTask({
     required this.id,
@@ -23,6 +24,7 @@ class HomeworkTask {
     required this.photoRequired,
     required this.taskType,
     this.latexContent,
+    this.taskOrder,
   });
 
   // Add getter for taskId to maintain backward compatibility
@@ -40,6 +42,7 @@ class HomeworkTask {
       'reikalinga_nuotrauka': photoRequired,
       'uzduoties_tipas': taskType,
       'latex_turinys': latexContent,
+      'taskOrder': taskOrder,
     };
   }
 
@@ -55,6 +58,7 @@ class HomeworkTask {
       photoRequired: map['reikalinga_nuotrauka'] as bool,
       taskType: map['uzduoties_tipas'] as String,
       latexContent: map['latex_turinys'] as String?,
+      taskOrder: map['taskOrder'] != null ? (map['taskOrder'] as num).toInt() : null,
     );
   }
 }

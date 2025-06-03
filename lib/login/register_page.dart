@@ -21,6 +21,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final nameController = TextEditingController();
   final surnameController = TextEditingController();
   bool isLoading = false;
+  String? fieldError;
 
   String getFirebaseAuthErrorMessage(String? code) {
     switch (code) {
@@ -40,6 +41,8 @@ class _RegisterPageState extends State<RegisterPage> {
         return 'Per daug bandymų. Bandykite vėliau.';
       case 'network-request-failed':
         return 'Patikrinkite interneto ryšį.';
+      case 'invalid-credential':
+        return 'Neteisingas el. paštas arba slaptažodis.';
       default:
         return 'Įvyko klaida. Bandykite dar kartą.';
     }
@@ -51,37 +54,38 @@ class _RegisterPageState extends State<RegisterPage> {
 
     // Validate inputs
     if (nameController.text.trim().isEmpty) {
-      showErrorMessage('Įveskite vardą');
+      setState(() { fieldError = 'Įveskite vardą'; });
       return;
     }
 
     if (surnameController.text.trim().isEmpty) {
-      showErrorMessage('Įveskite pavardę');
+      setState(() { fieldError = 'Įveskite pavardę'; });
       return;
     }
 
     if (emailController.text.trim().isEmpty) {
-      showErrorMessage('Įveskite el. paštą');
+      setState(() { fieldError = 'Įveskite el. paštą'; });
       return;
     }
 
     if (passwordController.text.isEmpty) {
-      showErrorMessage('Įveskite slaptažodį');
+      setState(() { fieldError = 'Įveskite slaptažodį'; });
       return;
     }
 
     if (confirmPasswordController.text.isEmpty) {
-      showErrorMessage('Pakartokite slaptažodį');
+      setState(() { fieldError = 'Pakartokite slaptažodį'; });
       return;
     }
 
     if (passwordController.text != confirmPasswordController.text) {
-      showErrorMessage('Slaptažodžiai nesutampa');
+      setState(() { fieldError = 'Slaptažodžiai nesutampa'; });
       return;
     }
 
     setState(() {
       isLoading = true;
+      fieldError = null;
     });
 
     try {
@@ -104,6 +108,7 @@ class _RegisterPageState extends State<RegisterPage> {
       nameController.clear();
       surnameController.clear();
       
+      setState(() { fieldError = null; });
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -119,10 +124,10 @@ class _RegisterPageState extends State<RegisterPage> {
       );
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      showErrorMessage(getFirebaseAuthErrorMessage(e.code));
+      setState(() { fieldError = getFirebaseAuthErrorMessage(e.code); });
     } catch (e) {
       if (!mounted) return;
-      showErrorMessage(getFirebaseAuthErrorMessage(null));
+      setState(() { fieldError = getFirebaseAuthErrorMessage(null); });
     } finally {
       if (mounted) {
         setState(() {
@@ -165,9 +170,10 @@ class _RegisterPageState extends State<RegisterPage> {
                 child: Container(
                   color: Colors.transparent,
                   child: const Center(
-                    child: Icon(
-                      Icons.lock,
-                      size: 120,
+                    child: Image(
+                      image: AssetImage('lib/login/loginPageFoto/Logo.png'),
+                      width: 120,
+                      height: 120,
                     ),
                   ),
                 )
@@ -188,6 +194,15 @@ class _RegisterPageState extends State<RegisterPage> {
                       children: [
                         const SizedBox(height: 30),
                         //name and surname
+                        if (fieldError != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 4.0),
+                            child: Text(
+                              fieldError!,
+                              style: const TextStyle(color: Colors.red, fontSize: 16),
+                              textAlign: TextAlign.left,
+                            ),
+                          ),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 40.0),
                           child: Row(
@@ -335,6 +350,21 @@ class _RegisterPageState extends State<RegisterPage> {
         ],
       ),
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    nameController.addListener(() {
+      if (fieldError != null) {
+        setState(() { fieldError = null; });
+      }
+    });
+    surnameController.addListener(() {
+      if (fieldError != null) {
+        setState(() { fieldError = null; });
+      }
+    });
   }
 
   @override

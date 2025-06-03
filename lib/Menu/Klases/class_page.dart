@@ -139,6 +139,7 @@ class _ClassPageState extends State<ClassPage> with SingleTickerProviderStateMix
           ],
         ),
       ),
+      backgroundColor: const Color(0xFFADD8E6),
       body: TabBarView(
         controller: _tabController,
         children: [
@@ -256,14 +257,53 @@ class _ClassPageState extends State<ClassPage> with SingleTickerProviderStateMix
 
                 CreateClassForm(
                   onSuccess: (joinCode) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Klasė sėkmingai sukurta! Prisijungimo kodas: $joinCode'))
+                    FocusScope.of(context).unfocus(); // Dismiss keyboard
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text('Sukurta!'),
+                          content: Text('Klasė sėkmingai sukurta! Prisijungimo kodas: $joinCode'),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                FocusScope.of(context).unfocus(); // Ensure keyboard stays dismissed
+                                Navigator.of(context).pop(); // Close dialog
+                                setState(() {}); // Trigger refresh
+                                _tabController.animateTo(0); // Switch to first tab
+                              },
+                              child: Text('Peržiūrėti klases'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop(); // Close dialog
+                              },
+                              child: Text('Gerai'),
+                            ),
+                          ],
+                        );
+                      },
                     );
                   },
                   onError: (error) {
-                    setState(() {
-                      _errorMessage = error;
-                    });
+                    FocusScope.of(context).unfocus(); // Dismiss keyboard
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text('Klaida'),
+                          content: Text(error),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop(); // Close dialog
+                              },
+                              child: Text('Gerai'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
                   },
                 ),
 

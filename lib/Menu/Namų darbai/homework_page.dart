@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../Klases/services/class_service.dart';
 import 'services/homework_service.dart';
 import 'models/homework_model.dart';
 import 'widgets/homework_card.dart';
@@ -28,7 +26,6 @@ class _HomeworkPageState extends State<HomeworkPage> with SingleTickerProviderSt
   late TabController _tabController;
   final HomeworkService _homeworkService = HomeworkService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  String? _errorMessage;
 
   @override
   void initState() {
@@ -62,7 +59,7 @@ class _HomeworkPageState extends State<HomeworkPage> with SingleTickerProviderSt
         bottom: TabBar(
           controller: _tabController,
           tabs: [
-            Tab(text: widget.isCreator ? 'Aktyvūs namų darbai' : 'Neatlikti namų darbai'),
+            Tab(text: widget.isCreator ? 'Aktyvus namų darbai' : 'Neatlikti namų darbai'),
             Tab(text: widget.isCreator ? 'Neaktyvūs namų darbai' : 'Atlikti namų darbai'),
           ],
         ),

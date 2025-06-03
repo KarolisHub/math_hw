@@ -5,7 +5,6 @@ import '../models/homework_model.dart';
 import '../services/homework_service.dart';
 import '../../../services/send_to_mathpix_scanner.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
-import 'package:math_keyboard/math_keyboard.dart';
 
 class TaskSubmissionForm extends StatefulWidget {
   final List<HomeworkTask> tasks;
@@ -24,9 +23,9 @@ class TaskSubmissionForm extends StatefulWidget {
 }
 
 class _TaskSubmissionFormState extends State<TaskSubmissionForm> {
-  final List<TextEditingController> _answerControllers = [];
-  final List<File?> _photos = [];
-  final List<String?> _latexContents = [];
+  final Map<String, TextEditingController> _answerControllers = {};
+  final Map<String, File?> _photos = {};
+  final Map<String, String?> _latexContents = {};
   final HomeworkService _homeworkService = HomeworkService();
   final MathpixScanner _mathpixScanner = MathpixScanner();
   String? _errorMessage;
@@ -34,22 +33,45 @@ class _TaskSubmissionFormState extends State<TaskSubmissionForm> {
   @override
   void initState() {
     super.initState();
-    for (var task in widget.tasks) {
-      _answerControllers.add(TextEditingController());
-      _photos.add(null);
-      _latexContents.add(null);
+    _initializeControllersAndState(widget.tasks);
+  }
+
+  @override
+  void didUpdateWidget(covariant TaskSubmissionForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tasks != widget.tasks) {
+      _initializeControllersAndState(widget.tasks);
+    }
+  }
+
+  void _initializeControllersAndState(List<HomeworkTask> tasks) {
+    // Sort tasks by taskOrder
+    final sortedTasks = List<HomeworkTask>.from(tasks)
+      ..sort((a, b) => (a.taskOrder ?? 0).compareTo(b.taskOrder ?? 0));
+    // Clear old controllers/state
+    for (var controller in _answerControllers.values) {
+      controller.dispose();
+    }
+    _answerControllers.clear();
+    _photos.clear();
+    _latexContents.clear();
+    // Initialize new controllers/state in sorted order
+    for (var task in sortedTasks) {
+      _answerControllers[task.id] = TextEditingController();
+      _photos[task.id] = null;
+      _latexContents[task.id] = null;
     }
   }
 
   @override
   void dispose() {
-    for (var controller in _answerControllers) {
+    for (var controller in _answerControllers.values) {
       controller.dispose();
     }
     super.dispose();
   }
 
-  Future<void> _pickImage(int taskIndex) async {
+  Future<void> _pickImage(String taskId) async {
     try {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(
@@ -61,7 +83,7 @@ class _TaskSubmissionFormState extends State<TaskSubmissionForm> {
 
       if (pickedFile != null) {
         setState(() {
-          _photos[taskIndex] = File(pickedFile.path);
+          _photos[taskId] = File(pickedFile.path);
         });
       }
     } catch (e) {
@@ -71,19 +93,20 @@ class _TaskSubmissionFormState extends State<TaskSubmissionForm> {
     }
   }
 
-  Future<void> _scanMathpix(int taskIndex) async {
+  Future<void> _scanMathpix(String taskId) async {
     try {
       final file = await _mathpixScanner.pickImage();
       if (file != null) {
         final result = await _mathpixScanner.sendToMathpix(file);
         setState(() {
-          _latexContents[taskIndex] = result;
-          _answerControllers[taskIndex].text = result;
+          _latexContents[taskId] = result;
+          _answerControllers[taskId]?.text = result;
         });
       }
     } catch (e) {
+      print('Mathpix API error: ' + e.toString());
       setState(() {
-        _errorMessage = 'Klaida skenuojant: ${e.toString()}';
+        _errorMessage = 'Paslauga šiuo metu nepasiekiama. Bandykite vėliau.';
       });
     }
   }
@@ -94,15 +117,14 @@ class _TaskSubmissionFormState extends State<TaskSubmissionForm> {
     });
 
     // Validate form
-    for (var i = 0; i < widget.tasks.length; i++) {
-      if (_answerControllers[i].text.isEmpty) {
+    for (var task in widget.tasks) {
+      if (_answerControllers[task.id]?.text.isEmpty ?? true) {
         setState(() {
           _errorMessage = 'Užpildykite visus atsakymus';
         });
         return;
       }
-
-      if (widget.tasks[i].photoRequired && _photos[i] == null) {
+      if (task.photoRequired && _photos[task.id] == null) {
         setState(() {
           _errorMessage = 'Pridėkite reikalingas nuotraukas';
         });
@@ -112,26 +134,23 @@ class _TaskSubmissionFormState extends State<TaskSubmissionForm> {
 
     try {
       final submissions = <TaskSubmission>[];
-      
-      for (var i = 0; i < widget.tasks.length; i++) {
+      for (var task in widget.tasks) {
         String? photoUrl;
-        if (_photos[i] != null) {
+        if (_photos[task.id] != null) {
           photoUrl = await _homeworkService.uploadTaskPhoto(
-            widget.tasks[i].taskId,
-            widget.tasks[i].taskId,
-            _photos[i]!,
+            task.taskId,
+            task.taskId,
+            _photos[task.id]!,
           );
         }
-
         submissions.add(TaskSubmission(
-          taskId: widget.tasks[i].taskId,
-          answer: _answerControllers[i].text,
+          taskId: task.taskId,
+          answer: _answerControllers[task.id]?.text,
           photoUrl: photoUrl,
-          answerType: widget.tasks[i].taskType,
-          latexContent: _latexContents[i],
+          answerType: task.taskType,
+          latexContent: _latexContents[task.id],
         ));
       }
-
       widget.onSubmit(submissions);
     } catch (e) {
       setState(() {
@@ -165,90 +184,107 @@ class _TaskSubmissionFormState extends State<TaskSubmissionForm> {
     );
   }
 
-  Widget _buildAnswerInput(int index, HomeworkTask task) {
-    switch (task.taskType) {
-      case 'text':
-        return TextField(
-          controller: _answerControllers[index],
-          decoration: InputDecoration(
-            labelText: 'Atsakymas',
-            border: OutlineInputBorder(),
+  Widget _buildAnswerInput(HomeworkTask task) {
+    final taskId = task.id;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (task.photoUrl != null) ...[
+          SizedBox(height: 8),
+          Text('Užduoties nuotrauka:', style: TextStyle(fontWeight: FontWeight.bold)),
+          SizedBox(height: 4),
+          Image.file(
+            File(task.photoUrl!),
+            height: 200,
+            fit: BoxFit.contain,
           ),
-          maxLines: 3,
-        );
-      
-      case 'handwriting':
-        return Column(
-          children: [
-            if (_photos[index] != null)
-              Image.file(
-                _photos[index]!,
-                height: 200,
-                fit: BoxFit.contain,
-              ),
-            ElevatedButton.icon(
-              onPressed: () => _pickImage(index),
-              icon: Icon(Icons.photo_camera),
-              label: Text('Pridėti nuotrauką'),
+        ],
+        if (task.latexContent != null && task.latexContent!.isNotEmpty) ...[
+          SizedBox(height: 8),
+          Text('Užduoties matematinė išraiška:', style: TextStyle(fontWeight: FontWeight.bold)),
+          SizedBox(height: 4),
+          Container(
+            padding: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
             ),
-          ],
-        );
-      
-      case 'image':
-        return Column(
-          children: [
-            if (_photos[index] != null)
-              Image.file(
-                _photos[index]!,
-                height: 200,
-                fit: BoxFit.contain,
-              ),
-            ElevatedButton.icon(
-              onPressed: () => _pickImage(index),
-              icon: Icon(Icons.photo_library),
-              label: Text('Pasirinkti nuotrauką'),
+            child: Math.tex(
+              task.latexContent!,
+              textStyle: TextStyle(fontSize: 18),
             ),
-          ],
-        );
-      
-      case 'mathpix':
-        return Column(
-          children: [
-            if (_latexContents[index] != null) ...[
-              Text('LaTeX: ${_latexContents[index]}'),
-              _buildLatexPreview(_latexContents[index]),
+          ),
+        ],
+        SizedBox(height: 16),
+        switch (task.taskType) {
+          'text' => TextField(
+            controller: _answerControllers[taskId],
+            decoration: InputDecoration(
+              labelText: 'Atsakymas',
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 3,
+          ),
+          'image' => Column(
+            children: [
+              if (_photos[taskId] != null)
+                Image.file(
+                  _photos[taskId]!,
+                  height: 200,
+                  fit: BoxFit.contain,
+                ),
+              ElevatedButton.icon(
+                onPressed: () => _pickImage(taskId),
+                icon: Icon(Icons.photo_library),
+                label: Text(_photos[taskId] != null ? 'Pakeisti nuotrauką' : 'Pasirinkti nuotrauką'),
+              ),
             ],
-            ElevatedButton.icon(
-              onPressed: () => _scanMathpix(index),
-              icon: Icon(Icons.camera_alt),
-              label: Text('Skenuoti'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
-        );
-      
-      default:
-        return TextField(
-          controller: _answerControllers[index],
-          decoration: InputDecoration(
-            labelText: 'Atsakymas',
-            border: OutlineInputBorder(),
           ),
-        );
-    }
+          'mathpix' => Column(
+            children: [
+              if (_latexContents[taskId] != null && _latexContents[taskId]!.isNotEmpty) ...[
+                _buildLatexPreview(_latexContents[taskId]),
+              ],
+              if (task.latexContent == null || task.latexContent!.isEmpty)
+                Center(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _scanMathpix(taskId),
+                    icon: Icon(Icons.camera_alt),
+                    label: Text(_latexContents[taskId] != null && _latexContents[taskId]!.isNotEmpty 
+                      ? 'Skanuoti iš naujo' 
+                      : 'Skanuoti'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          _ => TextField(
+            controller: _answerControllers[taskId],
+            decoration: InputDecoration(
+              labelText: 'Atsakymas',
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 3,
+          ),
+        },
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    // Sort tasks by taskOrder before displaying
+    final sortedTasks = List<HomeworkTask>.from(widget.tasks)
+      ..sort((a, b) => (a.taskOrder ?? 0).compareTo(b.taskOrder ?? 0));
+
     return Form(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ...widget.tasks.asMap().entries.map((entry) {
-            final index = entry.key;
+          ...sortedTasks.asMap().entries.map((entry) {
             final task = entry.value;
             return Card(
               margin: EdgeInsets.only(bottom: 16),
@@ -258,7 +294,7 @@ class _TaskSubmissionFormState extends State<TaskSubmissionForm> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Užduotis ${index + 1}: ${task.title}',
+                      'Užduotis ${entry.key + 1}: ${task.title}',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     if (task.description.isNotEmpty) ...[
@@ -266,7 +302,7 @@ class _TaskSubmissionFormState extends State<TaskSubmissionForm> {
                       Text(task.description),
                     ],
                     SizedBox(height: 16),
-                    _buildAnswerInput(index, task),
+                    _buildAnswerInput(task),
                   ],
                 ),
               ),

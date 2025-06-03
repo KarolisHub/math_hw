@@ -5,7 +5,6 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../../services/send_to_mathpix_scanner.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
-import 'package:math_keyboard/math_keyboard.dart';
 
 class CreateHomeworkForm extends StatefulWidget {
   final String classId;
@@ -27,6 +26,17 @@ class _CreateHomeworkFormState extends State<CreateHomeworkForm> {
   double _totalScore = 0.0;
   String? _errorMessage;
   bool _isSubmitting = false;
+  final Map<String, bool> _taskTypes = {
+    'text': false,
+    'image': false,
+    'mathpix': false,
+  };
+
+  final Map<String, String> _taskTypeLabels = {
+    'text': 'Tekstą',
+    'image': 'Nuotrauką',
+    'mathpix': 'Matematinė išraiška',
+  };
 
   @override
   void dispose() {
@@ -45,6 +55,7 @@ class _CreateHomeworkFormState extends State<CreateHomeworkForm> {
           });
         },
         taskNumber: _tasks.length + 1,
+        taskCount: _tasks.length,
       ),
     );
   }
@@ -67,6 +78,7 @@ class _CreateHomeworkFormState extends State<CreateHomeworkForm> {
           });
         },
         taskNumber: index + 1,
+        taskCount: index,
       ),
     );
   }
@@ -111,6 +123,7 @@ class _CreateHomeworkFormState extends State<CreateHomeworkForm> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      insetPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 22),
       child: SingleChildScrollView(
         child: Padding(
           padding: EdgeInsets.all(16),
@@ -307,12 +320,14 @@ class _TaskFormDialog extends StatefulWidget {
   final HomeworkTask? initialTask;
   final Function(HomeworkTask) onTaskAdded;
   final int taskNumber;
+  final int taskCount;
 
   const _TaskFormDialog({
     Key? key,
     this.initialTask,
     required this.onTaskAdded,
     required this.taskNumber,
+    required this.taskCount,
   }) : super(key: key);
 
   @override
@@ -330,6 +345,18 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
   File? _photo;
   String? _errorMessage;
   final MathpixScanner _mathpixScanner = MathpixScanner();
+
+  final Map<String, bool> _taskTypes = {
+    'text': false,
+    'image': false,
+    'mathpix': false,
+  };
+
+  final Map<String, String> _taskTypeLabels = {
+    'text': 'Tekstą',
+    'image': 'Nuotrauką',
+    'mathpix': 'Skanuotą uždavinį',
+  };
 
   @override
   void initState() {
@@ -356,7 +383,7 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
     try {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(
-        source: ImageSource.gallery,
+        source: ImageSource.camera,
         maxWidth: 1920,
         maxHeight: 1080,
         imageQuality: 85,
@@ -369,7 +396,7 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Klaida pasirenkant nuotrauką: ${e.toString()}';
+        _errorMessage = 'Klaida fotografuojant: ${e.toString()}';
       });
     }
   }
@@ -380,27 +407,40 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
       if (file != null) {
         final result = await _mathpixScanner.sendToMathpix(file);
         setState(() {
-          _latexContent = result;
+          String formattedLatex = result.trim();
+          if (formattedLatex.startsWith('\\(')) formattedLatex = formattedLatex.substring(2);
+          if (formattedLatex.endsWith('\\)')) formattedLatex = formattedLatex.substring(0, formattedLatex.length - 2);
+          if (formattedLatex.startsWith('4')) formattedLatex = formattedLatex.substring(1);
+          if (formattedLatex.endsWith('4')) formattedLatex = formattedLatex.substring(0, formattedLatex.length - 1);
+          _latexContent = formattedLatex;
         });
       }
     } catch (e) {
+      print('Mathpix API error: ' + e.toString());
       setState(() {
-        _errorMessage = 'Klaida skenuojant: ${e.toString()}';
+        _errorMessage = 'Paslauga šiuo metu nepasiekiama. Bandykite vėliau.';
       });
     }
   }
 
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
+      // Determine the task type based on which switches are enabled
+      String taskType = 'text';  // Default type
+      if (_taskTypes['image'] == true) taskType = 'image';
+      if (_taskTypes['mathpix'] == true) taskType = 'mathpix';
+
       final task = HomeworkTask(
         id: widget.initialTask?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         title: _titleController.text,
         description: _descriptionController.text,
-        type: _taskType,
+        type: taskType,
         maxScore: double.tryParse(_scoreController.text),
         photoRequired: _photoRequired,
-        taskType: _taskType,
+        taskType: taskType,
         latexContent: _latexContent,
+        photoUrl: _photo != null ? _photo!.path : null,  // Store the photo path
+        taskOrder: widget.taskNumber - 1,  // Use taskNumber - 1 to get the correct order
       );
 
       widget.onTaskAdded(task);
@@ -412,248 +452,187 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
     if (latex == null || latex.isEmpty) {
       return SizedBox.shrink();
     }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(height: 8),
-        Text('Peržiūra:', style: TextStyle(fontWeight: FontWeight.bold)),
-        SizedBox(height: 4),
-        Container(
-          padding: EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(8),
+    return Center(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(height: 8),
+          Text('Peržiūra:', style: TextStyle(fontWeight: FontWeight.bold)),
+          SizedBox(height: 4),
+          Container(
+            padding: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Math.tex(
+              latex,
+              textStyle: TextStyle(fontSize: 18),
+            ),
           ),
-          child: Math.tex(
-            latex,
-            textStyle: TextStyle(fontSize: 18),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
-  }
-
-  Widget _buildTaskTypeInput() {
-    switch (_taskType) {
-      case 'text':
-        return TextField(
-          controller: _descriptionController,
-          decoration: InputDecoration(
-            labelText: 'Užduoties aprašymas',
-            border: OutlineInputBorder(),
-          ),
-          maxLines: 3,
-        );
-      
-      case 'handwriting':
-        return Column(
-          children: [
-            TextField(
-              controller: _descriptionController,
-              decoration: InputDecoration(
-                labelText: 'Užduoties aprašymas',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-            ),
-            SizedBox(height: 16),
-            if (_photo != null)
-              Image.file(
-                _photo!,
-                height: 200,
-                fit: BoxFit.contain,
-              ),
-            ElevatedButton.icon(
-              onPressed: _pickImage,
-              icon: Icon(Icons.photo_camera),
-              label: Text('Pridėti nuotrauką'),
-            ),
-          ],
-        );
-      
-      case 'image':
-        return Column(
-          children: [
-            TextField(
-              controller: _descriptionController,
-              decoration: InputDecoration(
-                labelText: 'Užduoties aprašymas',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-            ),
-            SizedBox(height: 16),
-            if (_photo != null)
-              Image.file(
-                _photo!,
-                height: 200,
-                fit: BoxFit.contain,
-              ),
-            ElevatedButton.icon(
-              onPressed: _pickImage,
-              icon: Icon(Icons.photo_library),
-              label: Text('Pasirinkti nuotrauką'),
-            ),
-          ],
-        );
-      
-      case 'mathpix':
-        return Column(
-          children: [
-            TextField(
-              controller: _descriptionController,
-              decoration: InputDecoration(
-                labelText: 'Užduoties aprašymas',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-            ),
-            SizedBox(height: 16),
-            if (_latexContent != null) ...[
-              Text('LaTeX: $_latexContent'),
-              _buildLatexPreview(_latexContent),
-            ],
-            ElevatedButton.icon(
-              onPressed: _scanMathpix,
-              icon: Icon(Icons.camera_alt),
-              label: Text('Skenuoti'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
-        );
-      
-      default:
-        return TextField(
-          controller: _descriptionController,
-          decoration: InputDecoration(
-            labelText: 'Užduoties aprašymas',
-            border: OutlineInputBorder(),
-          ),
-          maxLines: 3,
-        );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      insetPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 22),
       child: SingleChildScrollView(
         padding: EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                '${widget.initialTask == null ? 'Pridėti' : 'Redaguoti'} užduotį ${widget.taskNumber}',
-                style: Theme.of(context).textTheme.titleLarge,
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 24),
-              TextFormField(
-                controller: _titleController,
-                decoration: InputDecoration(
-                  labelText: 'Užduoties pavadinimas',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Įveskite užduoties pavadinimą';
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _taskType,
-                decoration: InputDecoration(
-                  labelText: 'Užduoties tipas',
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  DropdownMenuItem(
-                    value: 'text',
-                    child: Text('Tekstas'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'handwriting',
-                    child: Text('Rankraštis'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'image',
-                    child: Text('Nuotrauka'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'mathpix',
-                    child: Text('Matematinė išraiška'),
-                  ),
-                ],
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _taskType = value;
-                    });
-                  }
-                },
-              ),
-              SizedBox(height: 16),
-              _buildTaskTypeInput(),
-              SizedBox(height: 16),
-              TextFormField(
-                controller: _scoreController,
-                decoration: InputDecoration(
-                  labelText: 'Maksimalus balas',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    final score = double.tryParse(value);
-                    if (score == null || score < 0) {
-                      return 'Įveskite teigiamą skaičių';
-                    }
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 16),
-              CheckboxListTile(
-                title: Text('Reikalinga nuotrauka'),
-                value: _photoRequired,
-                onChanged: (value) {
-                  setState(() {
-                    _photoRequired = value ?? false;
-                  });
-                },
-              ),
-              if (_errorMessage != null) ...[
-                SizedBox(height: 16),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.9, // 90% of screen width
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
                 Text(
-                  _errorMessage!,
-                  style: TextStyle(color: Colors.red),
+                  '${widget.taskNumber} užduotis',
+                  style: Theme.of(context).textTheme.titleLarge,
                   textAlign: TextAlign.center,
                 ),
-              ],
-              SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: Text('Atšaukti'),
+                SizedBox(height: 24),
+                
+                SizedBox(height: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Užduotį pateikti kaip', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ..._taskTypes.keys.map((type) => SwitchListTile(
+                      title: Text(_taskTypeLabels[type]!),
+                      value: _taskTypes[type]!,
+                      onChanged: (bool value) {
+                        setState(() {
+                          _taskTypes[type] = value;
+                        });
+                      },
+                    )),
+                    if (_taskTypes['text'] == true)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: TextField(
+                          controller: _descriptionController,
+                          decoration: InputDecoration(
+                            labelText: 'Užduoties aprašymas',
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 3,
+                        ),
+                      ),
+                    if (_taskTypes['image'] == true)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Column(
+                          children: [
+                            if (_photo != null)
+                              Image.file(
+                                _photo!,
+                                height: 200,
+                                fit: BoxFit.contain,
+                              ),
+                            Center(
+                              child: SizedBox(
+                                width: 190,
+                                child: ElevatedButton.icon(
+                                  onPressed: _pickImage,
+                                  icon: Icon(Icons.camera_alt),
+                                  label: Text(_photo != null ? 'Pakeisti nuotrauką' : 'Fotografuoti'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (_taskTypes['mathpix'] == true)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            if (_latexContent != null && _latexContent!.isNotEmpty) ...[
+                              _buildLatexPreview(_latexContent),
+                            ],
+                            Center(
+                              child: SizedBox(
+                                width: 190,
+                                child: ElevatedButton.icon(
+                                  onPressed: _scanMathpix,
+                                  icon: Icon(Icons.document_scanner),
+                                  label: Text(_latexContent != null && _latexContent!.isNotEmpty ? 'Skanuoti iš naujo' : 'Skanuoti'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                SizedBox(height: 16),
+                TextFormField(
+                  controller: _scoreController,
+                  decoration: InputDecoration(
+                    labelText: 'Maksimalus balas',
+                    border: OutlineInputBorder(),
                   ),
-                  SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _submitForm,
-                    child: Text('Išsaugoti'),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value != null && value.isNotEmpty) {
+                      final score = double.tryParse(value);
+                      if (score == null || score < 0) {
+                        return 'Įveskite teigiamą skaičių';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 16),
+                CheckboxListTile(
+                  title: Text('Reikalinga nuotrauka'),
+                  value: _photoRequired,
+                  onChanged: (value) {
+                    setState(() {
+                      _photoRequired = value ?? false;
+                    });
+                  },
+                ),
+                if (_errorMessage != null) ...[
+                  SizedBox(height: 16),
+                  Text(
+                    _errorMessage!,
+                    style: TextStyle(color: Colors.red),
+                    textAlign: TextAlign.center,
                   ),
                 ],
-              ),
-            ],
+                SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text('Atšaukti'),
+                    ),
+                    SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: _submitForm,
+                      child: Text('Išsaugoti'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -58,7 +58,8 @@ class HomeworkService {
         .get();
     final tasks = tasksSnapshot.docs
         .map((doc) => HomeworkTask.fromMap(doc.data()))
-        .toList();
+        .toList()
+        ..sort((a, b) => (a.taskOrder ?? 0).compareTo(b.taskOrder ?? 0));
 
     // Get submissions
     final submissionsSnapshot = await _firestore
@@ -188,11 +189,6 @@ class HomeworkService {
         'vartotojo_id': user.uid,
       });
     }
-
-    // Update homework status
-    await _firestore.collection('namu_darbai').doc(homeworkId).update({
-      'aktyvus': false,
-    });
   }
 
   // Upload photo for task submission
@@ -412,5 +408,101 @@ class HomeworkService {
     batch.delete(_firestore.collection('namu_darbai').doc(homeworkId));
 
     await batch.commit();
+  }
+
+  Future<void> submitTaskAnswer({
+    required String homeworkId,
+    required TaskSubmission taskSubmission,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('Nepavyko nustatyti vartotojo');
+
+    // Check if user already has a submission
+    final submissionQuery = await _firestore
+        .collection('namu_darbo_pateikimai')
+        .where('namu_darbo_id', isEqualTo: homeworkId)
+        .where('vartotojo_id', isEqualTo: user.uid)
+        .get();
+
+    String submissionId;
+    if (submissionQuery.docs.isEmpty) {
+      // Create new submission
+      final submissionRef = await _firestore.collection('namu_darbo_pateikimai').add({
+        'namu_darbo_id': homeworkId,
+        'vartotojo_id': user.uid,
+        'pateikimo_data': Timestamp.fromDate(DateTime.now()),
+        'busena': 'PATEIKTA',
+        'bendras_balas': 0.0,
+      });
+      submissionId = submissionRef.id;
+    } else {
+      submissionId = submissionQuery.docs.first.id;
+    }
+
+    // Add or update task submission
+    final taskSubmissionQuery = await _firestore
+        .collection('uzduoties_atsakymai')
+        .where('pateikimo_id', isEqualTo: submissionId)
+        .where('uzduoties_id', isEqualTo: taskSubmission.taskId)
+        .get();
+
+    if (taskSubmissionQuery.docs.isEmpty) {
+      // Add new task submission
+      await _firestore.collection('uzduoties_atsakymai').add({
+        ...taskSubmission.toMap(),
+        'pateikimo_id': submissionId,
+      });
+    } else {
+      // Update existing task submission
+      await taskSubmissionQuery.docs.first.reference.update(taskSubmission.toMap());
+    }
+  }
+
+  Future<void> deleteTaskAnswer({
+    required String homeworkId,
+    required String userId,
+    required String taskId,
+  }) async {
+    // Find the submission for this user and homework
+    final submissionQuery = await _firestore
+        .collection('namu_darbo_pateikimai')
+        .where('namu_darbo_id', isEqualTo: homeworkId)
+        .where('vartotojo_id', isEqualTo: userId)
+        .get();
+    if (submissionQuery.docs.isEmpty) return;
+    final submissionId = submissionQuery.docs.first.id;
+    // Find the task answer
+    final taskAnswerQuery = await _firestore
+        .collection('uzduoties_atsakymai')
+        .where('pateikimo_id', isEqualTo: submissionId)
+        .where('uzduoties_id', isEqualTo: taskId)
+        .get();
+    for (var doc in taskAnswerQuery.docs) {
+      await doc.reference.delete();
+    }
+  }
+
+  Future<void> deleteUserSubmission({
+    required String homeworkId,
+    required String userId,
+  }) async {
+    // Find the submission for this user and homework
+    final submissionQuery = await _firestore
+        .collection('namu_darbo_pateikimai')
+        .where('namu_darbo_id', isEqualTo: homeworkId)
+        .where('vartotojo_id', isEqualTo: userId)
+        .get();
+    if (submissionQuery.docs.isEmpty) return;
+    final submissionId = submissionQuery.docs.first.id;
+    // Delete all task answers for this submission
+    final taskAnswersQuery = await _firestore
+        .collection('uzduoties_atsakymai')
+        .where('pateikimo_id', isEqualTo: submissionId)
+        .get();
+    for (var doc in taskAnswersQuery.docs) {
+      await doc.reference.delete();
+    }
+    // Delete the submission itself
+    await _firestore.collection('namu_darbo_pateikimai').doc(submissionId).delete();
   }
 } 

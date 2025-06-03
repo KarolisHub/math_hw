@@ -110,14 +110,14 @@ class SubmissionList extends StatelessWidget {
                         Expanded(
                           child: FutureBuilder<DocumentSnapshot>(
                             future: FirebaseFirestore.instance
-                                .collection('users')
+                                .collection('vartotojai')
                                 .doc(submission.userId)
                                 .get(),
                             builder: (context, snapshot) {
                               if (snapshot.hasData) {
                                 final userData = snapshot.data!.data() as Map<String, dynamic>?;
                                 return Text(
-                                  '${userData?['name'] ?? 'Nežinomas'} ${userData?['surname'] ?? 'Vartotojas'}',
+                                  '${userData?['vardas'] ?? 'Nežinomas'} ${userData?['pavarde'] ?? 'Vartotojas'}',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,

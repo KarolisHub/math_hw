@@ -18,11 +18,26 @@ class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   bool isLoading = false;
+  String? emailError;
+
+  @override
+  void initState() {
+    super.initState();
+    emailController.addListener(() {
+      if (emailError != null) {
+        setState(() {
+          emailError = null;
+        });
+      }
+    });
+  }
 
   String getFirebaseAuthErrorMessage(String? code) {
     switch (code) {
       case 'invalid-email':
         return 'Neteisingas el. pašto formatas.';
+      case 'invalid-credential':
+        return 'Tokio vartotojo nėra';
       case 'user-disabled':
         return 'Ši paskyra yra išjungta.';
       case 'user-not-found':
@@ -55,28 +70,25 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       emailController.clear();
       passwordController.clear();
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Sėkmingai prisijungėte!'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Gerai'),
-            ),
-          ],
-        ),
-      );
+      setState(() { emailError = null; });
+
     } on FirebaseAuthException catch (e, stackTrace) {
-      print('FirebaseAuthException: \\${e.code} - \\${e.message}');
-      print('StackTrace: \\${stackTrace}');
+      print('FirebaseAuthException: ${e.code} - ${e.message}');
+      print('Error code: ${e.code}');
+      print('Error message: ${e.message}');
+      print('StackTrace: ${stackTrace}');
       if (!mounted) return;
-      showErrorMessage(getFirebaseAuthErrorMessage(e.code));
+      setState(() {
+        emailError = e.message ?? getFirebaseAuthErrorMessage(e.code);
+      });
     } catch (e, stackTrace) {
-      print('Other error: \\${e.toString()}');
-      print('StackTrace: \\${stackTrace}');
+      print('Other error: ${e.toString()}');
+      print('Error type: ${e.runtimeType}');
+      print('StackTrace: ${stackTrace}');
       if (!mounted) return;
-      showErrorMessage(getFirebaseAuthErrorMessage(null));
+      setState(() {
+        emailError = getFirebaseAuthErrorMessage(null);
+      });
     } finally {
       if (mounted) {
         setState(() { isLoading = false; });
@@ -158,165 +170,176 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFA500),
-      body: Stack(
-        children: [
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Container(
-                  color: Colors.transparent,
-                  child: const Center(
-                    child: Icon(
-                      Icons.lock,
-                      size: 150,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Container(
+                    color: Colors.transparent,
+                    child: const Center(
+                      child: Image(
+                        image: AssetImage('lib/login/loginPageFoto/Logo.png'),
+                        width: 150,
+                        height: 150,
+                      ),
                     ),
-                  ),
-                )
-              ),
-              Expanded(
-                flex: 2,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(40),
-                      topRight: Radius.circular(40)
+                  )
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(40),
+                        topRight: Radius.circular(40)
+                      ),
+                      color: Color(0xFFADD8E6),
                     ),
-                    color: Color(0xFFADD8E6),
-                  ),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const SizedBox(height: 50),
-                        //email
-                        LoginTextField(
-                          controller: emailController,
-                          hintText: 'El. paštas',
-                          obscureText: false,
-                        ),
-                      
-                        const SizedBox(height: 20),
-                      
-                        //password
-                        LoginTextField(
-                          controller: passwordController,
-                          hintText: 'Slaptažodis',
-                          obscureText: true,
-                        ),
-                      
-                        //forgot password
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 40.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              GestureDetector(
-                                onTap: resetPassword,
-                                child: const Text(
-                                  'Pamiršai slaptažodį?',
-                                  style: TextStyle(
-                                    color: Color(0xB3292D32),
-                                    decoration: TextDecoration.underline,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(height: 50),
+                          if (emailError != null)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 40.0, right: 40.0, bottom: 8.0),
+                              child: Text(
+                                emailError!,
+                                style: const TextStyle(color: Colors.red, fontSize: 14),
+                              ),
+                            ),
+                          //email
+                          LoginTextField(
+                            controller: emailController,
+                            hintText: 'El. paštas',
+                            obscureText: false,
+                          ),
+                        
+                          const SizedBox(height: 20),
+                        
+                          //password
+                          LoginTextField(
+                            controller: passwordController,
+                            hintText: 'Slaptažodis',
+                            obscureText: true,
+                          ),
+                        
+                          //forgot password
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                GestureDetector(
+                                  onTap: resetPassword,
+                                  child: const Text(
+                                    'Pamiršai slaptažodį?',
+                                    style: TextStyle(
+                                      color: Color(0xB3292D32),
+                                      decoration: TextDecoration.underline,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      
-                        const SizedBox(height: 20),
-                      
-                        //log in button
-                        LoginButton(
-                          onTap: isLoading ? null : signUserIn,
-                          text: isLoading ? 'Kraunama...' : 'Prisijungti',
-                        ),
-                      
-                        const SizedBox(height: 50),
-                      
-                        // 'or' text
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 25.0),
-                          child: Row(
+                        
+                          const SizedBox(height: 20),
+                        
+                          //log in button
+                          LoginButton(
+                            onTap: isLoading ? null : signUserIn,
+                            text: isLoading ? 'Kraunama...' : 'Prisijungti',
+                          ),
+                        
+                          const SizedBox(height: 50),
+                        
+                          // 'or' text
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 25.0),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Divider(
+                                    thickness: 1.2,
+                                    color: Color(0xFFFFA500),
+                                  ),
+                                ),
+                        
+                                Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 25.0),
+                                  child: Text(
+                                    "arba",
+                                    style: TextStyle(color: Color(0xB3292D32)),
+                                  ),
+                                ),
+                        
+                                Expanded(
+                                  child: Divider(
+                                    thickness: 1.2,
+                                    color: Color(0xFFFFA500),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 50),
+                        
+                          //google log in button
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Expanded(
-                                child: Divider(
-                                  thickness: 1.2,
-                                  color: Color(0xFFFFA500),
-                                ),
-                              ),
-                      
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 25.0),
-                                child: Text(
-                                  "arba",
-                                  style: TextStyle(color: Color(0xB3292D32)),
-                                ),
-                              ),
-                      
-                              Expanded(
-                                child: Divider(
-                                  thickness: 1.2,
-                                  color: Color(0xFFFFA500),
-                                ),
+                              SquareTile(
+                                onTap: () => _authService.signInWithGoogle(),
+                                imagePath: 'lib/login/loginPageFoto/google.png'
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(height: 50),
-                      
-                        //google log in button
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SquareTile(
-                              onTap: () => _authService.signInWithGoogle(),
-                              imagePath: 'lib/login/loginPageFoto/google.png'
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 50),
-                      
-                        //new user? register
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text(
-                              'Naujas vartotojas?',
-                              style: TextStyle(
-                                color: Color(0x80000000),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            GestureDetector(
-                              onTap: widget.onTap,
-                              child: const Text(
-                                'Registruotis.',
+                          const SizedBox(height: 50),
+                        
+                          //new user? register
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text(
+                                'Naujas vartotojas?',
                                 style: TextStyle(
-                                  decoration: TextDecoration.underline,
+                                  color: Color(0x80000000),
                                 ),
-                              )
-                            ),
-                          ],
-                        )
-                      ],
+                              ),
+                              const SizedBox(width: 6),
+                              GestureDetector(
+                                onTap: widget.onTap,
+                                child: const Text(
+                                  'Registruotis.',
+                                  style: TextStyle(
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                )
+                              ),
+                            ],
+                          )
+                        ],
+                      ),
                     ),
-                  ),
+                  )
                 )
-              )
-            ],
-          ),
-          if (isLoading)
-            Container(
-              color: Colors.black.withOpacity(0.5),
-              child: const Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFFFFA500),
+              ],
+            ),
+            if (isLoading)
+              Container(
+                color: Colors.black.withOpacity(0.5),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    color: Color(0xFFFFA500),
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

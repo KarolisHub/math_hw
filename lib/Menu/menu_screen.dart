@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../Home/camera_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'Klases/class_page.dart';
+import 'klaviatura.dart';
 
 class MenuScreen extends StatelessWidget {
   const MenuScreen({super.key});
@@ -31,9 +31,10 @@ class MenuScreen extends StatelessWidget {
                 color: Colors.transparent,
                 child: //logo
                 const Center(
-                  child: Icon(
-                    Icons.lock,
-                    size: 150,
+                  child: Image(
+                    image: AssetImage('lib/login/loginPageFoto/Logo.png'),
+                    width: 150,
+                    height: 150,
                   ),
                 ),
               )
@@ -63,39 +64,6 @@ class MenuScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-
-                        //mygtukas skanuoti uždavinį
-                        SizedBox(
-                          width: buttonWidth,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => CameraOCR()),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFFA500),
-                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.only(
-                                    topRight: Radius.circular(10),
-                                    bottomRight: Radius.circular(10)
-                                ),
-                              ),
-                            ),
-                            child: const Text(
-                              'Skanuoti uždavinį',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10), // Add spacing between buttons
-
                         //mygtukas klasės
                         SizedBox(
                           width: buttonWidth,
@@ -127,9 +95,36 @@ class MenuScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 10),
-
-
-
+                        // New button for Klaviatūra
+                        SizedBox(
+                          width: buttonWidth,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => KlaviaturaPage()),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFFA500),
+                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.only(
+                                    topRight: Radius.circular(10),
+                                    bottomRight: Radius.circular(10)
+                                ),
+                              ),
+                            ),
+                            child: const Text(
+                              'Klaviatūra',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
