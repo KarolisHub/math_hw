@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'dart:io';
 import 'models/homework_model.dart';
 import 'services/homework_service.dart';
-import 'widgets/task_submission_form.dart';
 import 'widgets/submission_list.dart';
 import 'widgets/comment_section.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
@@ -33,7 +32,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
   String? _errorMessage;
   bool _isSubmitting = false;
   // Local state for student answers
-  Map<String, TaskSubmission> _localTaskAnswers = {};
+  final Map<String, TaskSubmission> _localTaskAnswers = {};
 
   @override
   void initState() {
@@ -62,7 +61,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
         _isSubmitting = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Namų darbai sėkmingai pateikti')),
+        const SnackBar(content: Text('Namų darbai sėkmingai pateikti')),
       );
     } catch (e) {
       setState(() { _errorMessage = e.toString(); _isSubmitting = false; });
@@ -78,7 +77,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Terminas sėkmingai atnaujintas')),
+          const SnackBar(content: Text('Terminas sėkmingai atnaujintas')),
         );
         setState(() {
           _homeworkFuture = _homeworkService.getHomework(widget.homeworkId);
@@ -97,17 +96,17 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Archyvuoti namų darbą'),
-        content: Text('Ar tikrai norite archyvuoti šį namų darbą?'),
+        title: const Text('Archyvuoti namų darbą'),
+        content: const Text('Ar tikrai norite archyvuoti šį namų darbą?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Atšaukti'),
+            child: const Text('Atšaukti'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text('Archyvuoti'),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Archyvuoti'),
           ),
         ],
       ),
@@ -133,17 +132,17 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Ištrinti namų darbus'),
-        content: Text('Ar tikrai norite ištrinti šiuos namų darbus? Šis veiksmas negrįžtamas.'),
+        title: const Text('Ištrinti namų darbus'),
+        content: const Text('Ar tikrai norite ištrinti šiuos namų darbus? Šis veiksmas negrįžtamas.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Atšaukti'),
+            child: const Text('Atšaukti'),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text('Ištrinti'),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Ištrinti'),
           ),
         ],
       ),
@@ -198,14 +197,14 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Text('Pridėti atsakymą'),
+          title: const Text('Pridėti atsakymą'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Užduotis: ${task.title}'),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 // Toggles
                 Row(
                   children: [
@@ -213,7 +212,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
                       value: showText,
                       onChanged: (val) => setState(() => showText = val),
                     ),
-                    Text('Tekstinis atsakymas'),
+                    const Text('Tekstinis atsakymas'),
                   ],
                 ),
                 Row(
@@ -222,7 +221,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
                       value: showPhoto,
                       onChanged: (val) => setState(() => showPhoto = val),
                     ),
-                    Text('Fotografuoti'),
+                    const Text('Fotografuoti'),
                   ],
                 ),
                 Row(
@@ -231,33 +230,33 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
                       value: showScan,
                       onChanged: (val) => setState(() => showScan = val),
                     ),
-                    Text('Skanuoti'),
+                    const Text('Skanuoti'),
                   ],
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 // Text field
                 if (showText) ...[
                   TextField(
                     controller: answerController,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Atsakymas',
                       border: OutlineInputBorder(),
                     ),
                     maxLines: 3,
                   ),
-                  SizedBox(height: 24),
+                  const SizedBox(height: 24),
                 ],
                 // Photo preview and button
                 if (showPhoto) ...[
                   if (selectedImage != null) ...[
-                    Text('Pasirinkta nuotrauka:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    SizedBox(height: 8),
+                    const Text('Pasirinkta nuotrauka:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
                     Image.file(
                       selectedImage!,
                       height: 200,
                       fit: BoxFit.contain,
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                   ],
                   ElevatedButton.icon(
                     onPressed: () async {
@@ -275,33 +274,33 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
                         });
                       }
                     },
-                    icon: Icon(Icons.camera_alt),
-                    label: Text('Fotografuoti'),
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Fotografuoti'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFFFA500),
+                      backgroundColor: const Color(0xFFFFA500),
                       foregroundColor: Colors.white,
-                      minimumSize: Size(double.infinity, 45),
+                      minimumSize: const Size(double.infinity, 45),
                     ),
                   ),
-                  SizedBox(height: 24),
+                  const SizedBox(height: 24),
                 ],
                 // Scan preview and button
                 if (showScan) ...[
                   if (latexContent != null && latexContent!.isNotEmpty) ...[
-                    Text('Skenuotas atsakymas:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    SizedBox(height: 8),
+                    const Text('Skenuotas atsakymas:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
                     Container(
-                      padding: EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: Colors.grey[100],
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Math.tex(
                         latexContent!,
-                        textStyle: TextStyle(fontSize: 18),
+                        textStyle: const TextStyle(fontSize: 18),
                       ),
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                   ],
                   ElevatedButton.icon(
                     onPressed: () async {
@@ -314,20 +313,20 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
                         });
                       }
                     },
-                    icon: Icon(Icons.document_scanner),
-                    label: Text('Skanuoti'),
+                    icon: const Icon(Icons.document_scanner),
+                    label: const Text('Skanuoti'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFFFA500),
+                      backgroundColor: const Color(0xFFFFA500),
                       foregroundColor: Colors.white,
-                      minimumSize: Size(double.infinity, 45),
+                      minimumSize: const Size(double.infinity, 45),
                     ),
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                 ],
                 if (errorMessage != null) ...[
                   Text(
                     errorMessage!,
-                    style: TextStyle(color: Colors.red),
+                    style: const TextStyle(color: Colors.red),
                   ),
                 ],
               ],
@@ -336,7 +335,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Atšaukti'),
+              child: const Text('Atšaukti'),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -378,7 +377,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
                   }
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Atsakymas sėkmingai pateiktas')),
+                    const SnackBar(content: Text('Atsakymas sėkmingai pateiktas')),
                   );
                 } catch (e) {
                   setState(() {
@@ -386,9 +385,9 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
                   });
                 }
               },
-              child: Text('Pridėti'),
+              child: const Text('Pridėti'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFFFA500),
+                backgroundColor: const Color(0xFFFFA500),
                 foregroundColor: Colors.white,
               ),
             ),
@@ -411,7 +410,7 @@ class _HomeworkDetailPageState extends State<HomeworkDetailPage> {
             if (snapshot.hasData) {
               return Text(snapshot.data!.title);
             }
-            return Text('Namų darbai');
+            return const Text('Namų darbai');
           },
         ),
         backgroundColor: const Color(0xFFFFA500),
