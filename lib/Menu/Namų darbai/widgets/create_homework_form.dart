@@ -123,8 +123,9 @@ class _CreateHomeworkFormState extends State<CreateHomeworkForm> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      insetPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 22),
+      insetPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 16),
       child: SingleChildScrollView(
+        padding: EdgeInsets.only(top: 32, bottom: 40),
         child: Padding(
           padding: EdgeInsets.all(16),
           child: Column(
@@ -384,6 +385,7 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(
         source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.rear,
         maxWidth: 1920,
         maxHeight: 1080,
         imageQuality: 85,
@@ -396,7 +398,7 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Klaida fotografuojant: ${e.toString()}';
+        _errorMessage = 'Klaida fotografuojant:  ' + e.toString();
       });
     }
   }
@@ -478,160 +480,163 @@ class _TaskFormDialogState extends State<_TaskFormDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      insetPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 22),
+      insetPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 16),
       child: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.9, // 90% of screen width
-          ),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  '${widget.taskNumber} užduotis',
-                  style: Theme.of(context).textTheme.titleLarge,
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 24),
-                
-                SizedBox(height: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Užduotį pateikti kaip', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ..._taskTypes.keys.map((type) => SwitchListTile(
-                      title: Text(_taskTypeLabels[type]!),
-                      value: _taskTypes[type]!,
-                      onChanged: (bool value) {
-                        setState(() {
-                          _taskTypes[type] = value;
-                        });
-                      },
-                    )),
-                    if (_taskTypes['text'] == true)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: TextField(
-                          controller: _descriptionController,
-                          decoration: InputDecoration(
-                            labelText: 'Užduoties aprašymas',
-                            border: OutlineInputBorder(),
-                          ),
-                          maxLines: 3,
-                        ),
-                      ),
-                    if (_taskTypes['image'] == true)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Column(
-                          children: [
-                            if (_photo != null)
-                              Image.file(
-                                _photo!,
-                                height: 200,
-                                fit: BoxFit.contain,
-                              ),
-                            Center(
-                              child: SizedBox(
-                                width: 190,
-                                child: ElevatedButton.icon(
-                                  onPressed: _pickImage,
-                                  icon: Icon(Icons.camera_alt),
-                                  label: Text(_photo != null ? 'Pakeisti nuotrauką' : 'Fotografuoti'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.orange,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    if (_taskTypes['mathpix'] == true)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            if (_latexContent != null && _latexContent!.isNotEmpty) ...[
-                              _buildLatexPreview(_latexContent),
-                            ],
-                            Center(
-                              child: SizedBox(
-                                width: 190,
-                                child: ElevatedButton.icon(
-                                  onPressed: _scanMathpix,
-                                  icon: Icon(Icons.document_scanner),
-                                  label: Text(_latexContent != null && _latexContent!.isNotEmpty ? 'Skanuoti iš naujo' : 'Skanuoti'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.orange,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-                SizedBox(height: 16),
-                TextFormField(
-                  controller: _scoreController,
-                  decoration: InputDecoration(
-                    labelText: 'Maksimalus balas',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value != null && value.isNotEmpty) {
-                      final score = double.tryParse(value);
-                      if (score == null || score < 0) {
-                        return 'Įveskite teigiamą skaičių';
-                      }
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 16),
-                CheckboxListTile(
-                  title: Text('Reikalinga nuotrauka'),
-                  value: _photoRequired,
-                  onChanged: (value) {
-                    setState(() {
-                      _photoRequired = value ?? false;
-                    });
-                  },
-                ),
-                if (_errorMessage != null) ...[
-                  SizedBox(height: 16),
+        padding: EdgeInsets.only(top: 32, bottom: 40),
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.9, // 90% of screen width
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                   Text(
-                    _errorMessage!,
-                    style: TextStyle(color: Colors.red),
+                    '${widget.taskNumber} užduotis',
+                    style: Theme.of(context).textTheme.titleLarge,
                     textAlign: TextAlign.center,
                   ),
-                ],
-                SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text('Atšaukti'),
+                  SizedBox(height: 24),
+                  
+                  SizedBox(height: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Užduotį pateikti kaip', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ..._taskTypes.keys.map((type) => SwitchListTile(
+                        title: Text(_taskTypeLabels[type]!),
+                        value: _taskTypes[type]!,
+                        onChanged: (bool value) {
+                          setState(() {
+                            _taskTypes[type] = value;
+                          });
+                        },
+                      )),
+                      if (_taskTypes['text'] == true)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: TextField(
+                            controller: _descriptionController,
+                            decoration: InputDecoration(
+                              labelText: 'Užduoties aprašymas',
+                              border: OutlineInputBorder(),
+                            ),
+                            maxLines: 3,
+                          ),
+                        ),
+                      if (_taskTypes['image'] == true)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Column(
+                            children: [
+                              if (_photo != null)
+                                Image.file(
+                                  _photo!,
+                                  height: 200,
+                                  fit: BoxFit.contain,
+                                ),
+                              Center(
+                                child: SizedBox(
+                                  width: 190,
+                                  child: ElevatedButton.icon(
+                                    onPressed: _pickImage,
+                                    icon: Icon(Icons.camera_alt),
+                                    label: Text(_photo != null ? 'Pakeisti nuotrauką' : 'Fotografuoti'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.orange,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (_taskTypes['mathpix'] == true)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              if (_latexContent != null && _latexContent!.isNotEmpty) ...[
+                                _buildLatexPreview(_latexContent),
+                              ],
+                              Center(
+                                child: SizedBox(
+                                  width: 190,
+                                  child: ElevatedButton.icon(
+                                    onPressed: _scanMathpix,
+                                    icon: Icon(Icons.document_scanner),
+                                    label: Text(_latexContent != null && _latexContent!.isNotEmpty ? 'Skanuoti iš naujo' : 'Skanuoti'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.orange,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  TextFormField(
+                    controller: _scoreController,
+                    decoration: InputDecoration(
+                      labelText: 'Maksimalus balas',
+                      border: OutlineInputBorder(),
                     ),
-                    SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: _submitForm,
-                      child: Text('Išsaugoti'),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value != null && value.isNotEmpty) {
+                        final score = double.tryParse(value);
+                        if (score == null || score < 0) {
+                          return 'Įveskite teigiamą skaičių';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 16),
+                  CheckboxListTile(
+                    title: Text('Reikalinga nuotrauka'),
+                    value: _photoRequired,
+                    onChanged: (value) {
+                      setState(() {
+                        _photoRequired = value ?? false;
+                      });
+                    },
+                  ),
+                  if (_errorMessage != null) ...[
+                    SizedBox(height: 16),
+                    Text(
+                      _errorMessage!,
+                      style: TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
                     ),
                   ],
-                ),
-              ],
+                  SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text('Atšaukti'),
+                      ),
+                      SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: _submitForm,
+                        child: Text('Išsaugoti'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),

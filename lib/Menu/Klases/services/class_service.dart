@@ -232,18 +232,24 @@ class ClassService {
       throw Exception("Tik klasės kūrėjas gali ištrinti klasę");
     }
 
+    // Use a batch write to ensure atomicity
+    WriteBatch batch = _firestore.batch();
+
     // Delete all class members
     QuerySnapshot memberQuery = await _firestore
         .collection('klases_nariai')
         .where('klases_id', isEqualTo: classId)
         .get();
 
-    // Delete each member document
+    // Add member deletions to batch
     for (var doc in memberQuery.docs) {
-      await doc.reference.delete();
+      batch.delete(doc.reference);
     }
 
-    // Delete the class document
-    await classDoc.reference.delete();
+    // Add class deletion to batch
+    batch.delete(classDoc.reference);
+
+    // Commit the batch
+    await batch.commit();
   }
 } 

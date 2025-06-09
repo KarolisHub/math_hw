@@ -35,7 +35,7 @@ class ClassCard extends StatelessWidget {
             ? 'Jūsų sukurta klasė • Kodas: $joinCode'
             : 'Jūs esate šios klasės dalyvis'),
         trailing: PopupMenuButton<String>(
-          onSelected: (value) {
+          onSelected: (value) async {
             switch (value) {
               case 'regenerate':
                 onRegenerateCode();
@@ -83,7 +83,7 @@ class ClassCard extends StatelessWidget {
                   ],
                 ),
               ),
-            ] else
+            ] else ...[
               const PopupMenuItem(
                 value: 'leave',
                 child: Row(
@@ -94,6 +94,7 @@ class ClassCard extends StatelessWidget {
                   ],
                 ),
               ),
+            ],
           ],
         ),
         onTap: onTap,

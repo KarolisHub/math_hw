@@ -32,6 +32,7 @@ class _CreateClassFormState extends State<CreateClassForm> {
 
     try {
       String joinCode = await _classService.createClass(_classNameController.text.trim());
+      FocusScope.of(context).unfocus();
       _classNameController.clear();
       widget.onSuccess(joinCode);
     } catch (e) {

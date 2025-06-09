@@ -7,6 +7,7 @@ import 'class_members_page.dart';
 import 'widgets/class_card.dart';
 import 'widgets/join_class_form.dart';
 import 'widgets/create_class_form.dart';
+import '../menu_screen.dart';
 
 class ClassPage extends StatefulWidget {
   const ClassPage({Key? key}) : super(key: key);
@@ -20,15 +21,24 @@ class _ClassPageState extends State<ClassPage> with SingleTickerProviderStateMix
   final ClassService _classService = ClassService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   String? _errorMessage;
+  Key _streamBuilderKey = UniqueKey();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_handleTabChange);
+  }
+
+  void _handleTabChange() {
+    if (_tabController.indexIsChanging) {
+      setState(() {}); // Force rebuild when tab changes
+    }
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     super.dispose();
   }
@@ -104,13 +114,18 @@ class _ClassPageState extends State<ClassPage> with SingleTickerProviderStateMix
 
     try {
       await _classService.deleteClass(classId);
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Klasė "$className" sėkmingai ištrinta'))
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Klasė "$className" sėkmingai ištrinta'))
+        );
+        setState(() {}); // Force rebuild after deletion
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Nepavyko ištrinti klasės: ${e.toString()}'))
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Nepavyko ištrinti klasės: ${e.toString()}'))
+        );
+      }
     }
   }
 
@@ -127,199 +142,249 @@ class _ClassPageState extends State<ClassPage> with SingleTickerProviderStateMix
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Mano klasės'),
-        backgroundColor: const Color(0xFFFFA500),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            Tab(text: 'Mano klasės'),
-            Tab(text: 'Prisijungti/Sukurti'),
-          ],
+    return WillPopScope(
+      onWillPop: () async {
+        // When going back, replace with a new instance to ensure clean state
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => MenuScreen()),
+        );
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Mano klasės'),
+          backgroundColor: const Color(0xFFFFA500),
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: [
+              Tab(text: 'Mano klasės'),
+              Tab(text: 'Prisijungti/Sukurti'),
+            ],
+          ),
         ),
-      ),
-      backgroundColor: const Color(0xFFADD8E6),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          // Tab 1: Classes view
-          StreamBuilder<QuerySnapshot>(
-            stream: _classService.getUserClassesStream(),
-            builder: (context, memberSnapshot) {
-              if (memberSnapshot.connectionState == ConnectionState.waiting) {
-                return Center(child: CircularProgressIndicator());
-              }
+        backgroundColor: const Color(0xFFADD8E6),
+        body: TabBarView(
+          controller: _tabController,
+          children: [
+            // Tab 1: Classes view
+            StreamBuilder<QuerySnapshot>(
+              key: _streamBuilderKey,
+              stream: _classService.getUserClassesStream(),
+              builder: (context, memberSnapshot) {
+                if (memberSnapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
 
-              if (memberSnapshot.hasError) {
-                return Center(child: Text('Klaida: ${memberSnapshot.error}'));
-              }
+                if (memberSnapshot.hasError) {
+                  return Center(child: Text('Klaida: ${memberSnapshot.error}'));
+                }
 
-              if (!memberSnapshot.hasData || memberSnapshot.data!.docs.isEmpty) {
-                return Center(child: Text('Kol kas dar esat neprisijungę prie klasės'));
-              }
+                if (!memberSnapshot.hasData || memberSnapshot.data!.docs.isEmpty) {
+                  return Center(child: Text('Kol kas dar esat neprisijungę prie klasės'));
+                }
 
-              List<String> classIds = memberSnapshot.data!.docs
-                  .map((doc) => doc['klases_id'] as String)
-                  .toList();
+                List<String> classIds = memberSnapshot.data!.docs
+                    .map((doc) => doc['klases_id'] as String)
+                    .toList();
 
-              Map<String, String> roles = {};
-              for (var doc in memberSnapshot.data!.docs) {
-                roles[doc['klases_id'] as String] = doc['vartotojo_tipas'] as String;
-              }
+                Map<String, String> roles = {};
+                for (var doc in memberSnapshot.data!.docs) {
+                  roles[doc['klases_id'] as String] = doc['vartotojo_tipas'] as String;
+                }
 
-              return StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('klases')
-                    .where(FieldPath.documentId, whereIn: classIds)
-                    .snapshots(),
-                builder: (context, classSnapshot) {
-                  if (classSnapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
-                  }
+                return StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('klases')
+                      .where(FieldPath.documentId, whereIn: classIds)
+                      .snapshots(),
+                  builder: (context, classSnapshot) {
+                    if (classSnapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: CircularProgressIndicator());
+                    }
 
-                  if (classSnapshot.hasError) {
-                    return Center(child: Text('Klaida: ${classSnapshot.error}'));
-                  }
+                    if (classSnapshot.hasError) {
+                      return Center(child: Text('Klaida: ${classSnapshot.error}'));
+                    }
 
-                  if (!classSnapshot.hasData || classSnapshot.data!.docs.isEmpty) {
-                    return Center(child: Text('Klasių nerasta'));
-                  }
+                    if (!classSnapshot.hasData || classSnapshot.data!.docs.isEmpty) {
+                      return Center(child: Text('Klasių nerasta'));
+                    }
 
-                  return ListView.builder(
-                    itemCount: classSnapshot.data!.docs.length,
-                    itemBuilder: (context, index) {
-                      DocumentSnapshot classDoc = classSnapshot.data!.docs[index];
-                      Map<String, dynamic> classData = classDoc.data() as Map<String, dynamic>;
-                      String classId = classDoc.id;
-                      String role = roles[classId] ?? 'klases_dalyvis';
-                      bool isCreator = role == 'klases_kurejas';
+                    return ListView.builder(
+                      itemCount: classSnapshot.data!.docs.length,
+                      itemBuilder: (context, index) {
+                        DocumentSnapshot classDoc = classSnapshot.data!.docs[index];
+                        Map<String, dynamic> classData = classDoc.data() as Map<String, dynamic>;
+                        String classId = classDoc.id;
+                        String role = roles[classId] ?? 'klases_dalyvis';
+                        bool isCreator = role == 'klases_kurejas';
 
-                      return ClassCard(
-                        classId: classId,
-                        className: classData['pavadinimas'],
-                        joinCode: classData['prisijungimo_kodas'],
-                        isCreator: isCreator,
-                        onRegenerateCode: () => _regenerateClassCode(classId),
-                        onManageMembers: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ClassMembersPage(
-                                classId: classId,
-                                className: classData['pavadinimas'],
+                        return ClassCard(
+                          classId: classId,
+                          className: classData['pavadinimas'],
+                          joinCode: classData['prisijungimo_kodas'],
+                          isCreator: isCreator,
+                          onRegenerateCode: () => _regenerateClassCode(classId),
+                          onManageMembers: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ClassMembersPage(
+                                  classId: classId,
+                                  className: classData['pavadinimas'],
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                        onDeleteClass: () => _deleteClass(classId, classData['pavadinimas']),
-                        onLeaveClass: () => _leaveClass(classId, classData['pavadinimas']),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => HomeworkPage(
-                                classId: classId,
-                                className: classData['pavadinimas'],
-                                isCreator: isCreator,
+                            );
+                          },
+                          onDeleteClass: () => _deleteClass(classId, classData['pavadinimas']),
+                          onLeaveClass: () => _leaveClass(classId, classData['pavadinimas']),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => HomeworkPage(
+                                  classId: classId,
+                                  className: classData['pavadinimas'],
+                                  isCreator: isCreator,
+                                ),
                               ),
+                            );
+                          },
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+
+            // Tab 2: Join/Create Class
+            SingleChildScrollView(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  JoinClassForm(
+                    onSuccess: (className) {
+                      FocusScope.of(context).unfocus(); // Dismiss keyboard
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return WillPopScope(
+                            onWillPop: () async => false, // Prevent back button
+                            child: AlertDialog(
+                              title: Text('Prisijungta!'),
+                              content: Text('Sėkmingai prisijungėte prie klasės: $className'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () {
+                                    FocusScope.of(context).unfocus();
+                                    Navigator.of(context).pop(); // Close dialog
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ClassPage(),
+                                      ),
+                                    );
+                                  },
+                                  child: Text('Peržiūrėti klases'),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop(); // Close dialog
+                                  },
+                                  child: Text('Gerai'),
+                                ),
+                              ],
                             ),
                           );
                         },
                       );
                     },
-                  );
-                },
-              );
-            },
-          ),
-
-          // Tab 2: Join/Create Class
-          SingleChildScrollView(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                JoinClassForm(
-                  onSuccess: (className) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Sėkmingai prisijungėte prie klasės: $className'))
-                    );
-                  },
-                  onError: (error) {
-                    setState(() {
-                      _errorMessage = error;
-                    });
-                  },
-                ),
-
-                SizedBox(height: 24),
-
-                CreateClassForm(
-                  onSuccess: (joinCode) {
-                    FocusScope.of(context).unfocus(); // Dismiss keyboard
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: Text('Sukurta!'),
-                          content: Text('Klasė sėkmingai sukurta! Prisijungimo kodas: $joinCode'),
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                FocusScope.of(context).unfocus(); // Ensure keyboard stays dismissed
-                                Navigator.of(context).pop(); // Close dialog
-                                setState(() {}); // Trigger refresh
-                                _tabController.animateTo(0); // Switch to first tab
-                              },
-                              child: Text('Peržiūrėti klases'),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop(); // Close dialog
-                              },
-                              child: Text('Gerai'),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  },
-                  onError: (error) {
-                    FocusScope.of(context).unfocus(); // Dismiss keyboard
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: Text('Klaida'),
-                          content: Text(error),
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop(); // Close dialog
-                              },
-                              child: Text('Gerai'),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  },
-                ),
-
-                if (_errorMessage != null)
-                  Padding(
-                    padding: EdgeInsets.only(top: 16),
-                    child: Text(
-                      _errorMessage!,
-                      style: TextStyle(color: Colors.red),
-                      textAlign: TextAlign.center,
-                    ),
+                    onError: (error) {
+                      setState(() {
+                        _errorMessage = error;
+                      });
+                    },
                   ),
-              ],
+
+                  SizedBox(height: 24),
+
+                  CreateClassForm(
+                    onSuccess: (joinCode) {
+                      FocusScope.of(context).unfocus(); // Dismiss keyboard
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return WillPopScope(
+                            onWillPop: () async => false, // Prevent back button
+                            child: AlertDialog(
+                              title: Text('Sukurta!'),
+                              content: Text('Klasė sėkmingai sukurta! Prisijungimo kodas: $joinCode'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () {
+                                    FocusScope.of(context).unfocus(); // Ensure keyboard is dismissed
+                                    Navigator.of(context).pop(); // Close dialog
+                                    // Replace current route with a new instance of ClassPage
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ClassPage(),
+                                      ),
+                                    );
+                                  },
+                                  child: Text('Peržiūrėti klases'),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop(); // Close dialog
+                                  },
+                                  child: Text('Gerai'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                    onError: (error) {
+                      FocusScope.of(context).unfocus(); // Dismiss keyboard
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text('Klaida'),
+                            content: Text(error),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop(); // Close dialog
+                                },
+                                child: Text('Gerai'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
+
+                  if (_errorMessage != null)
+                    Padding(
+                      padding: EdgeInsets.only(top: 16),
+                      child: Text(
+                        _errorMessage!,
+                        style: TextStyle(color: Colors.red),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

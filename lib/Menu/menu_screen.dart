@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'Klases/class_page.dart';
 import 'klaviatura.dart';
+import 'profilis_page.dart';
 
 class MenuScreen extends StatelessWidget {
   const MenuScreen({super.key});
@@ -117,6 +118,38 @@ class MenuScreen extends StatelessWidget {
                             ),
                             child: const Text(
                               'Klaviatūra',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        // New button for Profilis
+                        SizedBox(
+                          width: buttonWidth,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const ProfilisPage()),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFFA500),
+                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.only(
+                                    topRight: Radius.circular(10),
+                                    bottomRight: Radius.circular(10)
+                                ),
+                              ),
+                            ),
+                            child: const Text(
+                              'Profilis',
                               style: TextStyle(
                                 fontSize: 18,
                                 color: Colors.white,
